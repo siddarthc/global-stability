@@ -1,0 +1,13 @@
+1) Passed tests for supersonic problems (tested on ramp)
+2) Subsonic tests for cylinder work. But theres reflection at the boundaries
+3) Implemented transmissive BC of Toro ... pg 222 2nd edition. Reduced reflections.
+4) added option to add white noise to initial and inlet BC.
+
+Issues:
+1) Need to implement the isothermal BC at domain boundaries in the hyperbolic solve.
+2) Need to implement the isothermal EBBC.
+3) maxLevel > 0 and no EB doesn't work with diffusive solver.
+4) Implicit reflux not working.
+5) Fix restart with different ref_ratio.
+6) Need to add probe data.
+7) restart using different max_level.

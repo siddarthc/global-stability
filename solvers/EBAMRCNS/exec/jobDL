@@ -1,0 +1,19 @@
+#!/bin/bash
+                          # Use Bash Shell
+
+#SBATCH -J sfd          #Job name
+#SBATCH -o sfd.%j.out   # stdout; %j expands jobid
+#SBATCH -e sfd.%j.err   # stderr; skip to combine stdout and stderr
+#SBATCH -p development        # queue
+#SBATCH -N 16              # Number of nodes, not cores (16 cores/node)
+#SBATCH -n 256             # Total number of MPI tasks (if omitted, n=N)
+#SBATCH -t 02:00:00       # max time
+
+#SBATCH --mail-user=siddarth.chintamani@mavs.uta.edu
+#SBATCH --mail-user=raman.aditya@mavs.uta.edu
+#SBATCH --mail-type=ALL
+
+#SBATCH -A Global-Stability-of
+
+                          # Run the MPI executable named "addexe"
+ibrun ./navierDriver2d.Linux.64.mpicxx.ifort.MPI.ex sphere.inputs

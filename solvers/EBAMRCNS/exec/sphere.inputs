@@ -1,0 +1,148 @@
+restart_file = chk.sphere.nx.256.000546.2d.hdf5
+artificial_viscosity = 0.05
+cfl = 0.95
+use_mass_redist = 1
+initial_cfl = 0.5
+verbosity = 1
+max_step = 400000
+#max_step = 10
+max_time = 1200.0
+tag_buffer_size = 2
+#refine_thresh = 0.1
+regrid_interval = 8 8 8 8 8 8
+max_dt_growth = 1.15
+dt_tolerance_factor = 1.05
+#fixed_dt   = 0.0005
+fixed_dt   = -1
+#air or h2
+gamma = 1.4
+#helium
+#gamma = 1.659
+backward_euler = true
+
+tag_on_energy = false
+tag_on_density = false
+tag_on_vorticity = true
+#tag_inflow = true
+#grad_density_refine_thresh = 0.1
+#grad_energy_refine_thresh = 0.1
+vorticity_refine_thresh = 0.5
+
+# Domain domain - physical coordinates (2D)
+# prob_lo is the origin of the coordinate system
+prob_lo =  0.0 0. 0.
+# prob_hi is the high point of the domain in the x direction
+# Note:  dx = dy = dz
+prob_hi = 50.0 50.0 50.0
+domain_length = 50.0 50.0 50.0
+#number you multiply r0 by to get floor
+smallness = 1.0e-1
+
+#turn off implicit reflux can sometimes
+#help early in a run to keep it stable
+#(sometimes the solves do not converge)
+turn_off_implicit_reflux = true
+max_level = 0
+##grid parameters
+#coarsest grid size
+logflag = 0
+n_cell =   256 256 64
+ref_ratio = 4 4 4 2 2 2 2
+#ref_ratio = 2 4 4 4
+#ref_ratio = 2 4 4
+#ref_ratio = 8 8 8
+block_factor =  4
+max_grid_size = 32
+fill_ratio = 0.75
+do_smushing = 1
+###file output stuff
+checkpoint_interval = 50
+plot_interval = 25
+check_max_and_min = true
+plot_prefix  = plt.sphere
+chk_prefix = chk.sphere
+
+plot_vorticity = true
+
+use_fourth_order_slopes = 1
+use_flattening = 1
+use_art_visc   = 0
+redist_radius = 1
+
+## 1 is a ramp; 5 is sphere
+which_geom = 5
+sphere_radius = 0.5
+sphere_center = 15.0 25.0 25.0
+##proper nesting radius
+#grid_buffer_size = 1
+##proper nesting radius
+grid_buffer_size = 1
+
+ebvto_do_lazy_relax = true
+amrmultigrid.num_smooth = 16
+amrmultigrid.num_mg = 1
+amrmultigrid.hang_eps = 1.0e-15
+amrmultigrid.norm_thresh = 1.0e-15
+amrmultigrid.tolerance = 1.0e-15
+amrmultigrid.max_iter = 100
+amrmultigrid.verbosity = 1
+do_diffusion = true
+#do_diffusion = false
+tag_all_irregular = true
+use_air_coefficients = false
+specific_heat        = 717.4
+
+thermal_conductivity = 2.624e-2
+#mu_viscosity         = 1.854e-5
+#lambda_viscosity     = -1.236e-5
+# for Re 100
+mu_viscosity         = 0.01
+lambda_viscosity     = 0.0
+
+inflowDir = 0
+outflowDir = 0
+inflowDense = 1.0
+#inflowPress = 101325.0
+inflowPress = 1725.0
+#back pressure at the outlet (if flow is subsonic, pressure at outlet is set to this)
+#outflowPress = 101325.0
+outflowPress = 1725.0
+# for Re = 100
+inflowVel = 1.0 0 0
+initVel = 1.0 0 0
+#initPress = 101325.0
+initPress = 1725.0
+initDense = 1.0
+do_initWhiteNoise = false
+do_inflowWhiteNoise = false
+initWhiteNoise = 0.1
+inflowWhiteNoise = 0.1
+wallBCLo = 0 1 1
+wallBCHi = 0 1 1
+slipWallLo = 0 1 1
+slipWallHi = 0 1 1
+do_adiabaticBCLo = 0 1 1
+do_adiabaticBCHi = 0 1 1
+do_isothermalBCLo = 0 0 0
+do_isothermalBCHi = 0 0 0
+isoTempBCLo = 0 300 300
+isoTempBCHi = 0 300 300
+
+totalPresBC = 0  # works best!
+#totalPresBC = 1
+
+#SFD stuff
+do_SFD = true
+restart_SFD = true
+plot_SFD = true
+nFilters = 1
+smallest_filter = 3.144
+largest_filter = 3.144 
+control_coef = 0.451
+#smallest_filter = 12
+#largest_filter = 300
+#control_coef = 1.0
+
+# steady state check
+convergence_metric = 0.000001
+convergence_variable = 1  #for x-momentum
