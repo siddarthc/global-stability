@@ -8,7 +8,10 @@ CHOMBO_HOME = /work/02138/siddarth/CHOMBO/Chombo-3.2/lib
 
 LibNames = EBAMRTimeDependent EBAMRElliptic EBAMRTools Workshop EBTools AMRElliptic AMRTimeDependent AMRTools BoxTools
 base_dir = .
-src_dirs = ../libStability/ ../SFD/libSFD ../SFD/srcSFD ../solvers/EBAMRINS/src ../solvers/EBAMRINS/srcLib
+
+#compiling both INS and CNS gives compilation errors due to multiple definitions of InflowOutflowIBC
+#src_dirs = ../libStability/ ../SFD/libSFD ../SFD/srcSFD ../solvers/EBAMRINS/src ../solvers/EBAMRINS/srcLib ../solvers/EBAMRCNS/src
+src_dirs = ../libStability/ ../SFD/libSFD ../SFD/srcSFD ../solvers/EBAMRCNS/src ../solvers/srcSolvers
 
 INPUT = ramp.2d.inputs
 

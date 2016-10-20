@@ -36,11 +36,11 @@ int main(int a_argc, char* a_argv[])
       pout() << "No input file specified" << endl;
       return -1;
     }
+  
   // Parse the command line and the input file (if any)
   ParmParse pp(a_argc-2,a_argv+2,NULL,inFile);
 
-
-//  amrPlasma(inFile);
+  StabilityEvaluator<Real> evaluator;
 
   }
 

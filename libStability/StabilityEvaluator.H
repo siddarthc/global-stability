@@ -8,7 +8,8 @@
 #ifndef _StabilityEvaluator_H_
 #define _StabilityEvaluator_H_
 
-#include "SolverFactory.H"
+#include "SolverInterfaceFactory.H"
+#include "SolverInterface.H"
 
 using namespace std;
 
@@ -20,39 +21,111 @@ public:
 
   StabilityEvaluator()
   {
-    m_isDefined = false;
+
+  }
+  
+  // setup stabilty evaluator:
+  // a_solverInterfaceFactory creates the solverInterface to the solver
+  // a_subspaceDim is the Krylov subspace dim
+  // a_eps is the magnitude of the perturbation
+  // a_timestep is the time between the snapshots that span Krylov subspace
+  // a_baseFlowFile is the file containing the baseFlow
+
+  StabilityEvaluator(SolverInterfaceFactory<T>& a_solverInterfaceFact, 
+                     int                        a_subspaceDim, 
+                     double                     a_eps, 
+                     double                     a_timeStep,
+                     string                     a_baseflowFile)
+  {
+    define(a_solverInterfaceFact, a_subspaceDim, a_eps, a_timeStep, a_baseflowFile);
   }
 
-  StabilityEvaluator(SolverFactory& a_solverFact, int a_subspaceDim, double a_eps, double a_timeStep)
+  // setup stabilty evaluator:
+  // a_solverInterfaceFactory creates the solverInterface to the solver
+  // a_subspaceDim is the Krylov subspace dim
+  // a_eps is the magnitude of the perturbation
+  // a_timestep is the time between the snapshots that span Krylov subspace
+  // a_baseFlowFile is the file containing the baseFlow
+  
+  void define(SolverInterfaceFactory<T>& a_solverInterfaceFact, 
+              int                        a_subspaceDim, 
+              double                     a_eps, 
+              double                     a_timeStep,
+              string                     a_baseflowFile)
   {
-    define(a_solver, a_baseFlow, a_subspaceDim, a_eps, a_timeStep);
-  } 
-
-  void define(SolverFactory& a_solverFact, int a_subspaceDim, double a_eps, double a_timeStep)
-  {
-    m_solver = a_solverFact.create();
-    
-    m_eps         = a_eps;
-    m_subspaceDim = a_subspaceDim;
-    m_timeStep    = a_timeStep;
-
-    m_isDefined = true;
+    m_solverInterface = a_solverInterfaceFact.create();
+    m_eps             = a_eps;
+    m_subspaceDim     = a_subspaceDim;
+    m_timeStep        = a_timeStep;
+    m_baseflowFile    = a_baseflowFile;
+    m_isDefined       = true;
   }
 
   ~StabilityEvaluator()
   {
+    for(int i = 0; i < m_subspaceDim; i++)
+      {
+        delete [] m_hessenMatrix[i];
+      }
+
+    delete [] m_hessenMatrix;
+  }
+
+
+  void computeStability()
+  {
+    allocate();
+    m_solverInterface->setupForStabilityRun(m_baseflowFile);
+    m_solverInterface->copySolution(m_baseFlow);
+    fillInitialKrylovVector();
+    computeHessenMatrix();
+    clearKrylovVectors();
+       
+//    computeEigenModes();
 
   }
 
 private:
+
+  void fillInitialVector()
+  {
+    m_solverInterface->fillWithNoise(m_krylovVector[0]);
+    m_solverInterface->normalize(m_krylovVector[0]);
+  }
   
+  void allocate()
+  {
+    m_hessenMatrix  = new double*[m_subspaceDim];
+    for (int i = 0; i < m_subspaceDim; i++)
+      {
+        m_hessenMatrix[i] = new double[m_subspaceDim];
+      }
+
+    m_krylovVectors = new T[m_subspaceDim];
+  }
+
+  void computeHessenMatrix()
+  {
+     
+  }
+
+  void clearKrylovVectors()
+  {
+    delete [] m_krylovVectors;
+  }
+
   bool m_isDefined;
 
-  Solver* m_solver;
+  SolverInterface<T>* m_solverInterface;
 
   int     m_subspaceDim;
   double  m_eps;
   double  m_timeStep;
+  string  m_baseflowFile;  
+
+  double** m_hessenMatrix; // a 2D array
+  T*       m_krylovVectors;
+  T        m_baseFlow;  
 };
 
 #endif
