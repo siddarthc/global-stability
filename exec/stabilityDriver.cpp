@@ -21,17 +21,6 @@
 #endif
 
 /*********/
-void
-exampleRoutine (const Epetra_Comm& comm,
-                std::ostream& out)
-{
-  if (comm.MyPID () == 0) {
-    // On (MPI) Process 0, print out the Epetra software version.
-    out << "in main:" << std::endl << std::endl;
-  }
-}
-
-/*********/
 int main(int a_argc, char* a_argv[])
 {
 #ifdef CH_MPI
@@ -60,30 +49,15 @@ int main(int a_argc, char* a_argv[])
   }
 
 #ifdef CH_MPI
-
-  // Trilinos MPI test
   MPI_Comm wcomm = Chombo_MPI::comm;
-/*
-  Epetra_MpiComm comm (wcomm);
-
-  const int myRank = comm.MyPID();
-  const int numProcs = comm.NumProc();
-
-  if (myRank == 0)
-    {
-      std::cout << "Total number of processes: " << numProcs << std::endl;
-    }
-
-  exampleRoutine(comm, std::cout);
-*/
-  StabilityEvaluator<double> testEvaluator(1,1.0,1.0,"dummy",&wcomm);
+  StabilityEvaluator<double> testEvaluator(1,1.0,1.0,"dummy",NULL,&wcomm);
   testEvaluator.exampleRoutine();
-/*
-  if (myRank == 0)
-    {
-      std::cout << "End Result: TEST PASSED" << std::endl;
-    } 
-*/
+#else
+  StabilityEvaluator<double> testEvaluator(1,1.0,1.0,"dummy",NULL,NULL);
+  testEvaluator.exampleRoutine();
+#endif
+
+#ifdef CH_MPI
   CH_TIMER_REPORT();
   dumpmemoryatexit();
   MPI_Finalize();

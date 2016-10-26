@@ -16,10 +16,14 @@ class TrilinosSolverInterfaceFactory
 public:
 
   TrilinosSolverInterfaceFactory()
-  {;}
+  {
+
+  }
 
   virtual ~TrilinosSolverInterfaceFactory()
-  {;}
+  {
+
+  }
 
   virtual TrilinosSolverInterface<T>* create() const = 0;
 };
