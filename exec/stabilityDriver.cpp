@@ -11,8 +11,25 @@
 #include "memtrack.H"
 #include "CH_Attach.H"
 #include "CH_HDF5.H"
-
 #include "StabilityEvaluator.H"
+
+// Trilinos library includes
+#ifdef CH_MPI
+#include <Epetra_MpiComm.h>
+#else
+#include <Eperta_SerialComm.h>
+#endif
+
+/*********/
+void
+exampleRoutine (const Epetra_Comm& comm,
+                std::ostream& out)
+{
+  if (comm.MyPID () == 0) {
+    // On (MPI) Process 0, print out the Epetra software version.
+    out << "in main:" << std::endl << std::endl;
+  }
+}
 
 /*********/
 int main(int a_argc, char* a_argv[])
@@ -40,11 +57,33 @@ int main(int a_argc, char* a_argv[])
   // Parse the command line and the input file (if any)
   ParmParse pp(a_argc-2,a_argv+2,NULL,inFile);
 
-  StabilityEvaluator<Real> evaluator;
-
   }
 
 #ifdef CH_MPI
+
+  // Trilinos MPI test
+  MPI_Comm wcomm = Chombo_MPI::comm;
+/*
+  Epetra_MpiComm comm (wcomm);
+
+  const int myRank = comm.MyPID();
+  const int numProcs = comm.NumProc();
+
+  if (myRank == 0)
+    {
+      std::cout << "Total number of processes: " << numProcs << std::endl;
+    }
+
+  exampleRoutine(comm, std::cout);
+*/
+  StabilityEvaluator<double> testEvaluator(1,1.0,1.0,"dummy",&wcomm);
+  testEvaluator.exampleRoutine();
+/*
+  if (myRank == 0)
+    {
+      std::cout << "End Result: TEST PASSED" << std::endl;
+    } 
+*/
   CH_TIMER_REPORT();
   dumpmemoryatexit();
   MPI_Finalize();

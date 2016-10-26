@@ -33,7 +33,7 @@ public:
 
   virtual void normalize(T& a_state) = 0;
 
-  virtual void run(double a_startTime, double a_endTime) = 0;
+//  virtual void (double a_startTime, double a_endTime) = 0;
 };
 
 #endif
