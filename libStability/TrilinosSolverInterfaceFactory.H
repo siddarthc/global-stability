@@ -8,9 +8,10 @@
 #ifndef _TrilinosSolverInterfaceFactory_H_
 #define _TrilinosSolverInterfaceFactory_H_
 
+#include <Teuchos_RCPDecl.hpp>
 #include "TrilinosSolverInterface.H"
 
-template <typename T>
+
 class TrilinosSolverInterfaceFactory
 {
 public:
@@ -25,7 +26,7 @@ public:
 
   }
 
-  virtual TrilinosSolverInterface<T>* create() const = 0;
+  virtual Teuchos::RCP<TrilinosSolverInterface> create() const = 0;
 };
 
 #endif

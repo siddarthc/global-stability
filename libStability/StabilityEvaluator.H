@@ -11,18 +11,41 @@
 #define _StabilityEvaluator_H_
 
 #include "TrilinosSolverInterfaceFactory.H"
-#include "TrilinosSolverInterface.H"
 
 //includes from Trilinos
 #include <Epetra_MpiComm.h>
 #include <Epetra_SerialComm.h>
-#include <Epetra_Version.h>
 #include <Epetra_Comm.h>
 #include <Epetra_Map.h>
+#include <Teuchos_RCPDecl.hpp>
+// Include header for block Krylov-Schur solver
+#include "AnasaziBlockKrylovSchurSolMgr.hpp"
+// Include header to define basic eigenproblem Ax = \lambda*Bx
+#include "AnasaziBasicEigenproblem.hpp"
+// Include header to provide Anasazi with Epetra adapters.  If you
+// plan to use Tpetra objects instead of Epetra objects, include
+// AnasaziTpetraAdapter.hpp instead; do analogously if you plan to use
+// Thyra objects instead of Epetra objects.
+
+#include "AnasaziEpetraAdapter.hpp"
+#include "AnasaziEpetraSolverAdapter.H"
+#include "AnasaziOperatorSolverExt.H"
 
 using namespace std;
+using Teuchos::RCP;
+using Teuchos::rcp;
 
-template <typename T>
+//typedef Epetra_MultiVector MV;
+//typedef Anasazi::EpetraMultiVec MV;
+typedef Teuchos::ScalarTraits<double>                   SCT;
+typedef SCT::magnitudeType                              MagnitudeType;
+typedef Anasazi::EpetraMultiVecSolverExt                MV;
+typedef Anasazi::OperatorSolverExt                      OP;
+typedef Anasazi::MultiVec<double>                       BaseMV;
+typedef Anasazi::Operator<double>                       BaseOP;
+typedef Anasazi::MultiVecTraits<double, BaseMV >        MVT;
+typedef Anasazi::OperatorTraits<double, BaseMV, BaseOP> OPT;
+
 class StabilityEvaluator
 {
 
@@ -36,15 +59,13 @@ public:
   // a_baseflowFile is the name of the file which contains the baseflow
   // a_solverInterfaceFact is the factory that produces solverInterface when needed
   // if a_comm is NULL, it sets up for serial run else it uses solver's MPI_Comm
-  StabilityEvaluator(int                                a_subspaceDim, 
-                     double                             a_eps, 
-                     double                             a_timeStep,
-                     string                             a_baseflowFile,
-                     TrilinosSolverInterfaceFactory<T>* a_solverInterfaceFact,
-                     MPI_Comm*                          a_commPtr)
-  {
-    define(a_subspaceDim, a_eps, a_timeStep, a_baseflowFile, a_solverInterfaceFact, a_commPtr);
-  }
+
+  StabilityEvaluator(int                                 a_subspaceDim, 
+                     double                              a_eps, 
+                     double                              a_timeStep,
+                     string                              a_baseflowFile,
+                     RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
+                     MPI_Comm*                           a_commPtr);
 
   // setup stabilty evaluator:
   // a_solverInterfaceFactory creates the solverInterface to the solver
@@ -52,51 +73,46 @@ public:
   // a_eps is the magnitude of the perturbation
   // a_timestep is the time between the snapshots that span Krylov subspace
   // a_baseflowFile is the name of file which contains the baseflow
+  // a_solverInterfaceFact is the factory that produces solverInterface when needed
   // a_comm is the communication between processors: serial or parallel comm
   // if a_comm is NULL, it sets up for serial run else it uses solver's MPI_Comm
-  void define(int                                a_subspaceDim, 
-              double                             a_eps, 
-              double                             a_timeStep,
-              string                             a_baseflowFile,
-              TrilinosSolverInterfaceFactory<T>* a_solverInterfaceFact,
-              MPI_Comm*                          a_commPtr)
-  {
-    m_eps             = a_eps;
-    m_subspaceDim     = a_subspaceDim;
-    m_timeStep        = a_timeStep;
-    m_baseflowFile    = a_baseflowFile;
-    m_solverInterface = a_solverInterfaceFact->create();
 
-    if (a_commPtr == NULL)
-      {
-        Epetra_SerialComm* commPtr = new Epetra_SerialComm ();
-        m_commPtr = (Epetra_Comm*)commPtr;        
-        m_isParallelRun = false;
-      }
-    else
-      {
-        Epetra_MpiComm* commPtr = new Epetra_MpiComm (*a_commPtr);
-        m_commPtr = (Epetra_Comm*)commPtr;
-        m_isParallelRun = true;
-      }
+  void define(int                                 a_subspaceDim, 
+              double                              a_eps, 
+              double                              a_timeStep,
+              string                              a_baseflowFile,
+              RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
+              MPI_Comm*                           a_commPtr);
 
-    m_isDefined       = true;
-  }
+  virtual ~StabilityEvaluator();
 
-  ~StabilityEvaluator()
-  {
-    delete m_commPtr;
-    delete m_solverInterface;
-  }
+  // a_tol is tolerence for the eigen value solver
+  // a_nev is number of eigen values to be computed
+  // a_blockSize is the size of the block of vectors
+  // a_maxRestarts is the max number of restarts allowed
+  // a_which is tells how to sort the eigen values. Options:
+  //   SM -> Sort in increasing order of magnitude
+  //   SR -> Sort in increasing order of real part
+  //   SI -> Sort in increasing order of imaginary part
+  //   LM -> Sort in decreasing order of magnitude
+  //   LR -> Sort in decreasing order of real part
+  //   LI -> Sort in decreasing order of imaginary part
+  // a_isOpSymmetric is true if Operator is symmetric
+  // a_verbose: if true, prints eigen values
+
+  // returns 0 if success
+
+  int computeDominantModes(double a_tol,
+                           int    a_nev,
+                           int    a_numBlocks,
+                           int    a_blockSize,
+                           int    a_maxRestarts,
+                           string a_which,
+                           bool   a_isOpSymmetric,
+                           bool   a_verbose);
 
   void
-  exampleRoutine ()
-  {
-    if (m_commPtr->MyPID () == 0) {
-      // On (MPI) Process 0, print out the Epetra software version.
-      std::cout << Epetra_Version () << std::endl << std::endl;
-    }
-  }
+  exampleRoutine ();
 
 private:
 
@@ -110,7 +126,7 @@ private:
 
   Epetra_Comm* m_commPtr;
 
-  TrilinosSolverInterface<T>* m_solverInterface;
+  RCP<TrilinosSolverInterface> m_solverInterface;
 
   // disallowed for all usual reasons
   StabilityEvaluator()

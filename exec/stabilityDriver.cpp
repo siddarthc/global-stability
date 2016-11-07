@@ -14,6 +14,8 @@
 #include "StabilityEvaluator.H"
 
 // Trilinos library includes
+#include "TrilinosSolverInterfaceFactory.H"
+#include <Teuchos_RCPDecl.hpp>
 #ifdef CH_MPI
 #include <Epetra_MpiComm.h>
 #else
@@ -48,12 +50,15 @@ int main(int a_argc, char* a_argv[])
 
   }
 
+  Teuchos::RCP<TrilinosSolverInterfaceFactory> fact;
+
 #ifdef CH_MPI
   MPI_Comm wcomm = Chombo_MPI::comm;
-  StabilityEvaluator<double> testEvaluator(1,1.0,1.0,"dummy",NULL,&wcomm);
+  StabilityEvaluator testEvaluator(1,1.0,1.0,"dummy",fact,&wcomm);
   testEvaluator.exampleRoutine();
+  testEvaluator.computeDominantModes(0.1,1,1,1,1,"LM",false,true);
 #else
-  StabilityEvaluator<double> testEvaluator(1,1.0,1.0,"dummy",NULL,NULL);
+  StabilityEvaluator testEvaluator(1,1.0,1.0,"dummy",fact,NULL);
   testEvaluator.exampleRoutine();
 #endif
 
