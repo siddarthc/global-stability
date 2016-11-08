@@ -5,7 +5,7 @@
  *
  */
 
-// This uses Trilinos package to compute eigen values
+// This uses Trilinos package to compute eigenvalues
 
 #ifndef _StabilityEvaluator_H_
 #define _StabilityEvaluator_H_

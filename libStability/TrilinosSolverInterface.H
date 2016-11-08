@@ -51,12 +51,14 @@ public:
   // return 0 is successfully computed
   virtual int computeDotProd(const Epetra_MultiVector& a_mv1, const Epetra_MultiVector& a_mv2, double* a_result) const = 0;
 
+/*
   bool isLinearSolver()
   {
     return m_isLinearSolver;
   }
+*/
 
-  virtual void computeSolution(const Epetra_MultiVector& a_x, Epetra_MultiVector& a_y) = 0;
+  virtual void computeSolution(const Epetra_MultiVector& a_x, Epetra_MultiVector& a_y) const = 0;
 
 protected:
   

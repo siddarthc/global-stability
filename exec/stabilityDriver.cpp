@@ -13,6 +13,8 @@
 #include "CH_HDF5.H"
 #include "StabilityEvaluator.H"
 
+#include "TrilinosChomboInterfaceFactory.H"
+
 // Trilinos library includes
 #include "TrilinosSolverInterfaceFactory.H"
 #include <Teuchos_RCPDecl.hpp>
