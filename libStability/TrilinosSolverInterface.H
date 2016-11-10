@@ -10,6 +10,8 @@
 
 #include <string>
 #include "Epetra_MultiVector.h"
+#include <Epetra_MpiComm.h>
+//#include <Eperta_SerialComm.h>
 
 class TrilinosSolverInterface
 {
@@ -17,7 +19,9 @@ public:
 
   TrilinosSolverInterface()
   {
-
+    m_isDtSizeSet = false;
+    m_isEpsSet = false;
+    m_isBaseflowSet = false;
   }
 
   virtual ~TrilinosSolverInterface()
@@ -27,21 +31,27 @@ public:
 
 
   // save the steady state data (solution, grids, etc.)
-  virtual void setupForStabilityRun(std::string a_baseflowFile) = 0;
+  virtual void setBaseflow(std::string a_baseflowFile) = 0;
 
   virtual void setEps(double a_eps)
   {
     m_eps = a_eps;
+    m_isEpsSet = true;
   }
 
   virtual void setTimeStepSize(double a_timeStepSize)
   {
     m_timeStepSize = a_timeStepSize;
+    m_isDtSizeSet = true;
   }
 
   // return the number of elements on this process
-  // It helps in direct copying to and from epetra multivectors is the solver's map and the epetra map are one to one 
+  // It helps in direct copying to and from epetra multivectors if the solver's map and the epetra map are one to one 
   virtual int nElementsOnThisProc() const = 0;
+
+  // get the Epetra_Map
+  //   the a_commPtr is not changed
+  virtual Epetra_Map getEpetraMap(const Epetra_Comm* a_commPtr) const = 0;
 
   // compute L2 norm of the Epetra_MultiVec
   // return 0 is successfully computed
@@ -60,12 +70,21 @@ public:
 
   virtual void computeSolution(const Epetra_MultiVector& a_x, Epetra_MultiVector& a_y) const = 0;
 
+  virtual bool isSetupForStabilityRun() const
+  {
+    return (m_isBaseflowSet && m_isEpsSet && m_isDtSizeSet);
+  }
+
 protected:
   
   double m_timeStepSize;
   double m_eps;
 
   bool m_isLinearSolver;
+
+  bool m_isBaseflowSet;
+  bool m_isEpsSet;
+  bool m_isDtSizeSet;
 };
 
 #endif

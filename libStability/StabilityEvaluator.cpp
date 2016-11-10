@@ -48,7 +48,7 @@ define(int                                 a_subspaceDim,
     m_isParallelRun = true;
   }
 
-  m_solverInterface->setupForStabilityRun(m_baseflowFile);
+  m_solverInterface->setBaseflow(m_baseflowFile);
   m_solverInterface->setEps(m_eps);
   m_solverInterface->setTimeStepSize(m_timeStep);
 
@@ -83,8 +83,10 @@ computeDominantModes(double a_tol,
   EigenPL.set( "Convergence Tolerance", a_tol );
 
   // just use the same distribution of elements as the solver to avoid comm overhead. Not sure if it's the best way
-  int locElements = m_solverInterface->nElementsOnThisProc();
-  Epetra_Map Map(-1, locElements, 0, *m_commPtr);
+//  int locElements = m_solverInterface->nElementsOnThisProc();
+//  Epetra_Map Map(-1, locElements, 0, *m_commPtr);
+
+  Epetra_Map Map = m_solverInterface->getEpetraMap(m_commPtr);
 
   RCP<MV> ivec = rcp (new MV (Map, a_blockSize, m_solverInterface) );
   MVT::MvRandom( *ivec );

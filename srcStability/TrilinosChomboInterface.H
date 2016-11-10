@@ -12,6 +12,9 @@
 #include "MayDay.H"
 #include "ChomboSolverInterfaceFactory.H"
 #include "RefCountedPtr.H"
+#include "Vector.H"
+#include "EBCellFAB.H"
+#include "LevelData.H"
 
 class TrilinosChomboInterface : public TrilinosSolverInterface
 {
@@ -27,9 +30,11 @@ public:
   
   TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact);
 
-  void setupForStabilityRun(std::string a_baseflowFile);
+  void setBaseflow(std::string a_baseflowFile);
 
   int nElementsOnThisProc() const;
+
+  Epetra_Map getEpetraMap(const Epetra_Comm* a_commPtr) const;
 
   int computeL2Norm(const Epetra_MultiVector& a_mv, double* a_result) const;
 
@@ -42,6 +47,12 @@ protected:
 private:
 
   ChomboSolverInterface* m_solverInterface;
+
+  // Baseflow parameters
+  //
+  bool m_isBaseflowSet;
+
+  Vector<LevelData<EBCellFAB>* > m_baseflow;
 
 };
 
