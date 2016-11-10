@@ -38,10 +38,12 @@ public:
   // Finest level data is written first, followed by its coarser level, so on to the coarsest level
   //
   // if a_incOverlapData is true, the data at the Coarse-Fine overlap regions is also copied
+  // a_refRatio is the refinement ratio between the levels. It is needed only if a_incOverlapData is false
   //
   static void rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                         Epetra_Vector*                       a_EpetraVec,
-                                        bool                                 a_incOverlapData = false);
+                                        bool                                 a_incOverlapData = true,
+                                        const Vector<Real>&                  a_refRatio = Vector<Real>());
 
 
   // function to put Epetra_Vector's data to Chombo's data Level by Level
@@ -50,24 +52,31 @@ public:
   //
   // if a_isOverlapDataInc is a flag to indicate if Epetra_Vector has the data at the Coarse-Fine overlap regions incluced in it
   //    if true, Epetra_Vector has the overlap data included
+  //  a_refRatio is the refinement ratio between the levels. It is needed only if a_overlapDataInc is false
   //
   static void unrollEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* >& a_ChomboData,
-                                          const Epetra_Vector*                 a_EpetraVec,
-                                          bool                           a_isOverlapDataInc = false);
+                                          const Epetra_Vector*           a_EpetraVec,
+                                          bool                           a_isOverlapDataInc = true,
+                                          const Vector<Real>&            a_refRatio = Vector<Real>());
 
 
   // get the number of Elements of a_ChomboData on the current proc
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted
+  // a_refRatio is the refinement ratio between the levels. It is needed only if a_incOverlapData is false
   //
   static int getnElementsOnThisProc(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
-                                    bool a_incOverlapData = false);
+                                    bool                                  a_incOverlapData = true,
+                                    const Vector<Real>&                   a_refRatio = Vector<Real>());
 
 
   // get the Epetra_Map corresponding to the given a_ChomboData and a_commPtr
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted
+  // a_refRatio is the refinement ratio between the levels. It is needed only if a_incOverlapData is false
+  //
   static Epetra_Map getEpetraMap(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                  const Epetra_Comm*                    a_commPtr,
-                                 bool a_incOverlapData = false);
+                                 bool                                  a_incOverlapData = true,
+                                 const Vector<Real>&                   a_refRatio = Vector<Real>());
 
 
 };
