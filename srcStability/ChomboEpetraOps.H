@@ -53,11 +53,14 @@ public:
   // if a_isOverlapDataInc is a flag to indicate if Epetra_Vector has the data at the Coarse-Fine overlap regions incluced in it
   //    if true, Epetra_Vector has the overlap data included
   //  a_refRatio is the refinement ratio between the levels. It is needed only if a_overlapDataInc is false
+  //  a_overlapVal is the value that is set at the region where coarse level overlaps with finer level. 
+  //      This is required only if a_isOverlapDataInc = false
   //
   static void unrollEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                           const Epetra_Vector*           a_EpetraVec,
                                           bool                           a_isOverlapDataInc = true,
-                                          const Vector<Real>&            a_refRatio = Vector<Real>());
+                                          const Vector<Real>&            a_refRatio = Vector<Real>(),
+                                          double                         a_overlapVal = 0.);
 
 
   // get the number of Elements of a_ChomboData on the current proc
