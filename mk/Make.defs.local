@@ -149,7 +149,7 @@ CPP           = cpp -C -E -P
 #RANLIB        =
 #cppdbgflags   =
 #cppoptflags   =
-cxxcppflags   = $(HDFINCFLAGS) $(HDFMPIINCFLAGS) $(TRILINOSINCFLAGS) -std=c++11
+cxxcppflags   = $(HDFINCFLAGS) $(HDFMPIINCFLAGS) $(TRILINOSINCFLAGS) -std=c++11 
 cxxdbgflags   = -g -O0 
 cxxoptflags   = -O2
 #cxxprofflags  =
