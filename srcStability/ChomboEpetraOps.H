@@ -81,6 +81,37 @@ public:
                                  bool                                  a_incOverlapData = true,
                                  const Vector<Real>&                   a_refRatio = Vector<Real>());
 
+  // get the weights for each component of the Epetra_Vector to compute weighted L2 norm and weighted inner product.
+  // 
+  // check the definition of weighted norm in Epetra_MultiVector doxygen
+  // weight = sqrt(domain volume/(volfrac*cellvol*Epetra_Vector->globallength()) )
+  //
+  // a_volWeights is the vector of volfrac*cellArea of all the cells 
+  // a_domainVolume is the total volume of the domain
+  // a_chomboData is the data which defines the Epetra_Vector's structure
+  // a_coarsestDx is the coarsest level's dx
+  // a_refRatio is the vector of refinement ratios between levels
+  // a_incOverlapData determined whether the coarse-fine overlap regions are included
 
+  static void getVolWeights(Epetra_Vector*                       a_weights,
+                            double&                              a_domainVolume,
+                            const Vector<LevelData<EBCellFAB>* > a_ChomboData, 
+                            const double&                        a_coarsestDx,
+                            const Vector<Real>&                  a_refRatio,
+                            bool                                 a_incOverlapData = true);
+
+  // compute L2 norm of the Epetra_Vector
+  //  just computes the regular unweighted norm
+  static int computeL2Norm(double&              a_norm,
+                           const Epetra_Vector& a_mv);
+/*
+  // compute volume weighted L2 norm of the Epetra_Vector
+  // a_n
+  static int computeVolWeightedL2Norm(double&              a_norm,
+                                      const Epetra_Vector& a_mv,
+                                      double               a_coarsestDx,
+                                      const Vector<Real>&  a_refRatio,
+                                      const Vector<LevelData<EBCellFAB> >);
+*/
 };
 #endif

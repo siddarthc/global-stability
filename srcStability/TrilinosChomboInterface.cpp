@@ -19,6 +19,9 @@ TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_sol
 {
   m_solverInterface = a_solverInterfaceFact->create();
   m_isBaseflowSet   = false;
+  m_isVolWeightsSet = false;
+  m_domainVolume    = 0.;
+  m_volWeights      = NULL;
 }
 
 /*********/
@@ -26,6 +29,8 @@ TrilinosChomboInterface::
 ~TrilinosChomboInterface()
 {
   delete m_solverInterface;
+
+  if (m_volWeights != NULL) delete m_volWeights;
 }
 
 /*********/
@@ -116,7 +121,9 @@ getEpetraMap(const Epetra_Comm* a_commPtr) const
 int TrilinosChomboInterface::
 computeL2Norm(const Epetra_MultiVector& a_mv, double* a_result) const
 {
-  return 1;
+  CH_assert(m_isBaseflowSet);
+//  int retval = ChomboEpetraOps::computeL2Norm(a_mv, *a_result);
+//  return retval;
 }
 
 /*********/

@@ -54,6 +54,12 @@ private:
 
   Vector<LevelData<EBCellFAB>* > m_baseflow;
 
+
+  // for weighted norms and inner products
+  Epetra_Vector* m_volWeights;
+  double         m_domainVolume;
+  bool           m_isVolWeightsSet;
+
 };
 
 #endif
