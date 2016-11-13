@@ -103,15 +103,34 @@ public:
   // compute L2 norm of the Epetra_Vector
   //  just computes the regular unweighted norm
   static int computeL2Norm(double&              a_norm,
-                           const Epetra_Vector& a_mv);
-/*
+                           const Epetra_Vector& a_v);
+
   // compute volume weighted L2 norm of the Epetra_Vector
-  // a_n
-  static int computeVolWeightedL2Norm(double&              a_norm,
-                                      const Epetra_Vector& a_mv,
-                                      double               a_coarsestDx,
-                                      const Vector<Real>&  a_refRatio,
-                                      const Vector<LevelData<EBCellFAB> >);
-*/
+  // a_norm is the computed norm
+  // a_v is the vector whose norm is computed
+  // a_weights is the vector of weights
+  static int computeWeightedL2Norm(double&              a_norm,
+                                   const Epetra_Vector& a_v,
+                                   const Epetra_Vector& a_weights);
+
+
+  // compute the dot product between 2 vectors
+  // a_v1 and a_v2 are the two vectors whose dot product is computed
+  static int computeDotProduct(double&              a_result,
+                               const Epetra_Vector& a_v1,
+                               const Epetra_Vector& a_v2);
+
+  // compute weights dot product of a_v1 and a_v2: 
+  // 		a_result = <a_v1|a_weights|a_v2>
+  // if a_unscale weights is true, it assumes weights are:
+  // 		(V/(n*dv))^0.5, where V is domain volume, n is Global vector length and dv is cell volume
+  // 		weights are unscaled and set to the cell volume dv
+  // if a_unscale is false, it assumes incoming weights are correct
+  static int computeWeightedDotProd(double& a_result,
+                                    const Epetra_Vector& a_v1,
+                                    const Epetra_Vector& a_v2,
+                                    const Epetra_Vector& a_weights,
+                                    bool a_unscaleWeights = true,
+                                    double a_domainVolume = 0.);
 };
 #endif

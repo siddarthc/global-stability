@@ -39,7 +39,7 @@ rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
       IntVectSet ivs(box);
       for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
       {
-        for (int ivar = 0; (ivar < nvar && success == 0); ivar++)
+        for (int ivar = 0; ((ivar < nvar) && (success == 0)); ivar++)
         {
           curIndex++;
           success = a_EpetraVec->ReplaceMyValues(1, &(ChomboData(vofit(), ivar)),&curIndex);
@@ -90,7 +90,7 @@ rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
     
       for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
       {
-        for (int ivar = 0; (ivar < nvar && success == 0); ivar++)
+        for (int ivar = 0; ((ivar < nvar) && (success == 0)); ivar++)
         {
           curIndex++;
           success = a_EpetraVec->ReplaceMyValues(1, &(ChomboData(vofit(), ivar)),&curIndex);
@@ -341,7 +341,7 @@ getVolWeights(Epetra_Vector*                       a_weights,
         Real weight = sqrt(1./(volfrac*cellvol));
         a_domainVolume += volfrac*cellvol;
 
-        for (int ivar = 0; (ivar < nvar && success == 0); ivar++)
+        for (int ivar = 0; ((ivar < nvar) && (success == 0)); ivar++)
         {
           curIndex++;
           success = a_weights->ReplaceMyValues(1, &weight ,&curIndex);
@@ -406,7 +406,7 @@ getVolWeights(Epetra_Vector*                       a_weights,
         Real weight = sqrt(1./(volfrac*cellvol));
         a_domainVolume += volfrac*cellvol;
 
-        for (int ivar = 0; (ivar < nvar && success == 0); ivar++)
+        for (int ivar = 0; ((ivar < nvar) && (success == 0)); ivar++)
         {
           curIndex++;
           success = a_weights->ReplaceMyValues(1, &weight,&curIndex);
@@ -428,7 +428,75 @@ getVolWeights(Epetra_Vector*                       a_weights,
 /*********/
 int ChomboEpetraOps::
 computeL2Norm(double&              a_norm,
-              const Epetra_Vector& a_mv)
+              const Epetra_Vector& a_v)
 {
-  return a_mv.Norm2(&a_norm);
+  return a_v.Norm2(&a_norm);
+}
+/*********/
+/*********/
+int ChomboEpetraOps::
+computeWeightedL2Norm(double&              a_norm,
+                      const Epetra_Vector& a_v,
+                      const Epetra_Vector& a_weights)
+{
+  return a_v.NormWeighted(a_weights, &a_norm);
+}
+/*********/
+/*********/
+int ChomboEpetraOps::
+computeDotProduct(double&              a_result,
+                  const Epetra_Vector& a_v1,
+                  const Epetra_Vector& a_v2)
+{
+  return a_v1.Dot(a_v2, &a_result);
+}
+/*********/
+/*********/
+int ChomboEpetraOps::
+computeWeightedDotProd(double& a_result,
+                       const Epetra_Vector& a_v1,
+                       const Epetra_Vector& a_v2,
+                       const Epetra_Vector& a_weights,
+                       bool a_unscaleWeights,
+                       double a_domainVolume)
+{
+  Epetra_Vector weightedVec(a_weights);
+  weightedVec.PutScalar(0.);
+
+  if (!a_unscaleWeights)
+  {
+    // do weightesVec = 0*weightedVec + 1*a_v2.*a_weights
+    weightedVec.Multiply(1., a_v2, a_weights, 0.);
+  }
+
+  else
+  {
+    CH_assert(a_domainVolume > 0.);
+  
+    int locLength = weightedVec.MyLength();
+    int globalLength = weightedVec.GlobalLength(); 
+
+    int success = 0;
+
+    for (int index = 0; ((index < locLength) && (success == 0)); index++)
+    {
+      // assumes weight = (domainVolume/(GlobalLength*cellVolume))^0.5
+      // make value = a_v2.*cellVolume
+      //
+      double value = 1./a_weights[index];
+      value *= value;
+      value *= a_domainVolume;
+      value /= globalLength;
+      value *= a_v2[index];
+      success = weightedVec.ReplaceMyValues(1, &value, &index);
+    }
+
+    if (success != 0)
+    {
+      string error_msg = "ChomboEpetraOps::computeWeightedDotProd : unscaling failed";
+      MayDay::Error(error_msg.c_str());
+    }
+  }
+
+  return a_v1.Dot(weightedVec, &a_result);
 }

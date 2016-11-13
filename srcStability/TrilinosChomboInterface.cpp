@@ -122,8 +122,8 @@ int TrilinosChomboInterface::
 computeL2Norm(const Epetra_Vector& a_v, double& a_result) const
 {
   CH_assert(m_isBaseflowSet);
-//  int retval = ChomboEpetraOps::computeL2Norm(a_mv, *a_result);
-//  return retval;
+  int retval = ChomboEpetraOps::computeL2Norm(a_result, a_v);
+  return retval;
 }
 
 /*********/
