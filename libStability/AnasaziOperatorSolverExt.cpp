@@ -27,6 +27,9 @@ namespace Anasazi {
     EpetraMultiVecSolverExt *y_vec = dynamic_cast<EpetraMultiVecSolverExt *>(&y);
     TEUCHOS_TEST_FOR_EXCEPTION( y_vec==NULL,  std::invalid_argument, "Anasazi::OperatorSolverExt::Apply cast of MultiVec<double> to EpetraMultiVecSolverExt failed.");
 
-    m_solverInterface->computeSolution(*x_vec, *y_vec);
+    int nvec = x_vec->NumVectors();
+    for (int ivec = 0; ivec < nvec; ivec++) {
+      m_solverInterface->computeSolution( *((*x_vec)(ivec)), *((*y_vec)(ivec)) );
+    }
   }
 }

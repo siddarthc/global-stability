@@ -119,7 +119,7 @@ getEpetraMap(const Epetra_Comm* a_commPtr) const
 
 /*********/
 int TrilinosChomboInterface::
-computeL2Norm(const Epetra_MultiVector& a_mv, double* a_result) const
+computeL2Norm(const Epetra_Vector& a_v, double& a_result) const
 {
   CH_assert(m_isBaseflowSet);
 //  int retval = ChomboEpetraOps::computeL2Norm(a_mv, *a_result);
@@ -128,14 +128,14 @@ computeL2Norm(const Epetra_MultiVector& a_mv, double* a_result) const
 
 /*********/
 int TrilinosChomboInterface::
-computeDotProd(const Epetra_MultiVector& a_mv1, const Epetra_MultiVector& a_mv2, double* a_result) const
+computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const
 {
   return 1;
 }
 
 /*********/
 void TrilinosChomboInterface::
-computeSolution(const Epetra_MultiVector& a_x, Epetra_MultiVector& a_y) const
+computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 {
 
 }

@@ -152,9 +152,12 @@ namespace Anasazi {
     TEUCHOS_TEST_FOR_EXCEPTION( A_vec==NULL,  std::invalid_argument, "Anasazi::EpetraMultiVecSolverExt::MvDot() cast of MultiVec<double> to EpetraMultiVecSolverExt failed.");
 
     if (( (int)b.size() >= A_vec->NumVectors() ) ) {
-      TEUCHOS_TEST_FOR_EXCEPTION( 
-          m_solverInterface->computeDotProd( *this, *A_vec, &b[0] ) != 0,
-          EpetraMultiVecFailure, "Anasazi::EpetraMultiVecSolverExt::MvDot() call to Epetra_MultiVec::Dot() returned a nonzero value.");
+      int nvec = A_vec->NumVectors();
+      for (int ivec = 0; ivec < nvec; ivec++) {
+        TEUCHOS_TEST_FOR_EXCEPTION( 
+            m_solverInterface->computeDotProd( *((*this)(ivec)), *((*A_vec)(ivec)), (&b[0])[ivec] ) != 0,
+            EpetraMultiVecFailure, "Anasazi::EpetraMultiVecSolverExt::MvDot() call to Epetra_MultiVec::Dot() returned a nonzero value.");
+      }
     }
   }
 
@@ -162,7 +165,10 @@ namespace Anasazi {
   void EpetraMultiVecSolverExt::MvNorm ( std::vector<double> & normvec) const
   {
     if (((int)normvec.size() >= GetNumberVecs()) ) {
-        TEUCHOS_TEST_FOR_EXCEPTION( m_solverInterface->computeL2Norm(*this, &normvec[0])!=0, EpetraMultiVecFailure, "Anasazi::EpetraMultiVecSolverExt::MvNorm call to Epetra_MultiVector::Norm2() returned a nonzero value.");
+        int nvec = this->NumVectors();
+        for (int ivec = 0; ivec < nvec; ivec++) {
+          TEUCHOS_TEST_FOR_EXCEPTION( m_solverInterface->computeL2Norm( *((*this)(ivec)), (&normvec[0])[ivec] )!=0, EpetraMultiVecFailure, "Anasazi::EpetraMultiVecSolverExt::MvNorm call to Epetra_MultiVector::Norm2() returned a nonzero value.");
+        }
       }
   }
 

@@ -36,11 +36,11 @@ public:
 
   Epetra_Map getEpetraMap(const Epetra_Comm* a_commPtr) const;
 
-  int computeL2Norm(const Epetra_MultiVector& a_mv, double* a_result) const;
+  int computeL2Norm(const Epetra_Vector& a_v, double& a_result) const;
 
-  int computeDotProd(const Epetra_MultiVector& a_mv1, const Epetra_MultiVector& a_mv2, double* a_result) const;
+  int computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const;
 
-  void computeSolution(const Epetra_MultiVector& a_x, Epetra_MultiVector& a_y) const;
+  void computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const;
 
 protected:
 

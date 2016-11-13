@@ -86,6 +86,16 @@ computeDominantModes(double a_tol,
 //  int locElements = m_solverInterface->nElementsOnThisProc();
 //  Epetra_Map Map(-1, locElements, 0, *m_commPtr);
 
+  bool isSolverInterfaceSet = m_solverInterface->isSetupForStabilityRun();
+  if (isSolverInterfaceSet != true)
+  {
+    if (m_commPtr->MyPID () == 0)
+    {
+      cout << "StabilityEveluator::computeDominantModes returned with error. solverInterface is not setup for stability run" << endl;
+    }
+    return 1;
+  }
+
   Epetra_Map Map = m_solverInterface->getEpetraMap(m_commPtr);
 
   RCP<MV> ivec = rcp (new MV (Map, a_blockSize, m_solverInterface) );

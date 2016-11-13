@@ -55,11 +55,11 @@ public:
 
   // compute L2 norm of the Epetra_MultiVec
   // return 0 is successfully computed
-  virtual int computeL2Norm(const Epetra_MultiVector& a_mv, double* a_result) const = 0;
+  virtual int computeL2Norm(const Epetra_Vector& a_v, double& a_result) const = 0;
 
   // compute the dot product of the MVs
   // return 0 is successfully computed
-  virtual int computeDotProd(const Epetra_MultiVector& a_mv1, const Epetra_MultiVector& a_mv2, double* a_result) const = 0;
+  virtual int computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const = 0;
 
 /*
   bool isLinearSolver()
@@ -68,7 +68,7 @@ public:
   }
 */
 
-  virtual void computeSolution(const Epetra_MultiVector& a_x, Epetra_MultiVector& a_y) const = 0;
+  virtual void computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const = 0;
 
   virtual bool isSetupForStabilityRun() const
   {
