@@ -74,7 +74,7 @@ setBaseflow(std::string a_baseflowFile)
 
     Vector<int> proc_map;
     ProblemDomain levelDomain;
-    m_solverInterface->setLevelDomain(&levelDomain, ilev);    
+    m_solverInterface->getLevelDomain(&levelDomain, ilev);    
 
     EBEllipticLoadBalance(proc_map, vboxGrids, levelDomain, false, ebisPtr);
     DisjointBoxLayout levelGrids = DisjointBoxLayout(vboxGrids,proc_map);
@@ -89,14 +89,16 @@ setBaseflow(std::string a_baseflowFile)
 
   EBAMRDataOps::setToZero(m_baseflow);
 
+  m_solverInterface->readFileAndCopyToBaseflow(m_baseflow, a_baseflowFile, handleIn);
+  m_isBaseflowSet = true;
+
+  handleIn.close();
 #else
 
   MayDay::Error("Chombo needs HDF5 to read baseflowFile");
 
 #endif
 
-  m_solverInterface->readFileAndCopyToBaseflow(m_baseflow, a_baseflowFile);
-  m_isBaseflowSet = true;
 }
 
 /*********/

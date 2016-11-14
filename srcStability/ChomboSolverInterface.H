@@ -8,6 +8,7 @@
 #define _Chombo_Solver_Interface_H_
 
 #include "EBIndexSpace.H"
+#include <Epetra_Vector.h>
 
 class ChomboSolverInterface
 {
@@ -27,7 +28,7 @@ public:
   virtual int getMaxLevelFromParmParse() const = 0;
 
   // set the ProblemDomain for the given level
-  virtual void setLevelDomain(ProblemDomain* a_domain, int a_level) const
+  virtual void getLevelDomain(ProblemDomain* a_domain, int a_level) const
   {
     if (a_level > 0)
     {
@@ -57,9 +58,15 @@ public:
   // get nComp in baseflow vector
   virtual int nComp() const = 0;
 
+#ifdef CH_USE_HDF5
+
   // read from the file a_baseflowFile and copy to a_baseflow
   // 	a_baseflow need not be defined in this routine
-  virtual void readFileAndCopyToBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseflow, std::string& a_baseflowFile) const = 0;
+  virtual void readFileAndCopyToBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseflow, std::string a_baseflowFile, HDF5Handle& a_handleIn) const = 0;
+
+  virtual void readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBoxLayout& a_levDBL, const EBISLayout& a_levEBISL, const ProblemDomain& a_domain, std::string a_baseflowFile, HDF5Handle& a_handleIn) const = 0;
+
+#endif
 
   // compute the solution (do: a_y = A*a_x)
   virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<LevelData<EBCellFAB>* >& a_baseflow, double a_eps, double a_integrationTime) const = 0;
