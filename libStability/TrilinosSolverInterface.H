@@ -39,9 +39,9 @@ public:
     m_isEpsSet = true;
   }
 
-  virtual void setTimeStepSize(double a_timeStepSize)
+  virtual void setIntegrationTime(double a_integrationTime)
   {
-    m_timeStepSize = a_timeStepSize;
+    m_integrationTime = a_integrationTime;
     m_isDtSizeSet = true;
   }
 
@@ -77,7 +77,7 @@ public:
 
 protected:
   
-  double m_timeStepSize;
+  double m_integrationTime;
   double m_eps;
 
   bool m_isLinearSolver;

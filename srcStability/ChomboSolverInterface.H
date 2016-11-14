@@ -60,6 +60,9 @@ public:
   // read from the file a_baseflowFile and copy to a_baseflow
   // 	a_baseflow need not be defined in this routine
   virtual void readFileAndCopyToBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseflow, std::string& a_baseflowFile) const = 0;
+
+  // compute the solution (do: a_y = A*a_x)
+  virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<LevelData<EBCellFAB>* >& a_baseflow, double a_eps, double a_integrationTime) const = 0;
   
 protected:
 

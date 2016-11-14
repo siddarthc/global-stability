@@ -126,11 +126,11 @@ public:
   // 		(V/(n*dv))^0.5, where V is domain volume, n is Global vector length and dv is cell volume
   // 		weights are unscaled and set to the cell volume dv
   // if a_unscale is false, it assumes incoming weights are correct
-  static int computeWeightedDotProd(double& a_result,
-                                    const Epetra_Vector& a_v1,
-                                    const Epetra_Vector& a_v2,
-                                    const Epetra_Vector& a_weights,
-                                    bool a_unscaleWeights = true,
-                                    double a_domainVolume = 0.);
+  static int computeWeightedDotProduct(double& a_result,
+                                       const Epetra_Vector& a_v1,
+                                       const Epetra_Vector& a_v2,
+                                       const Epetra_Vector& a_weights,
+                                       bool a_unscaleWeights = true,
+                                       double a_domainVolume = 0.);
 };
 #endif

@@ -103,7 +103,7 @@ setBaseflow(std::string a_baseflowFile)
 int TrilinosChomboInterface::
 nElementsOnThisProc() const
 {
-  CH_assert(m_isBaseflowSet);
+  CH_assert(isSetupForStabilityRun());
   int retval = ChomboEpetraOps::getnElementsOnThisProc(m_baseflow);
   return retval;
 }
@@ -112,7 +112,7 @@ nElementsOnThisProc() const
 Epetra_Map TrilinosChomboInterface::
 getEpetraMap(const Epetra_Comm* a_commPtr) const
 {
-  CH_assert(m_isBaseflowSet);
+  CH_assert(isSetupForStabilityRun());
   Epetra_Map retval = ChomboEpetraOps::getEpetraMap(m_baseflow, a_commPtr);
   return retval;
 }
@@ -121,7 +121,7 @@ getEpetraMap(const Epetra_Comm* a_commPtr) const
 int TrilinosChomboInterface::
 computeL2Norm(const Epetra_Vector& a_v, double& a_result) const
 {
-  CH_assert(m_isBaseflowSet);
+  CH_assert(isSetupForStabilityRun());
   int retval = ChomboEpetraOps::computeL2Norm(a_result, a_v);
   return retval;
 }
@@ -130,12 +130,15 @@ computeL2Norm(const Epetra_Vector& a_v, double& a_result) const
 int TrilinosChomboInterface::
 computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const
 {
-  return 1;
+  CH_assert(isSetupForStabilityRun());
+  int retval = ChomboEpetraOps::computeDotProduct(a_result, a_v1, a_v2);
+  return retval;
 }
 
 /*********/
 void TrilinosChomboInterface::
 computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 {
-
+  CH_assert(isSetupForStabilityRun());
+  m_solverInterface->computeSolution(a_y, a_x, m_baseflow, m_eps, m_integrationTime);
 }

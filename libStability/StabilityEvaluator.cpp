@@ -24,14 +24,14 @@ StabilityEvaluator(int                                 a_subspaceDim,
 void StabilityEvaluator:: 
 define(int                                 a_subspaceDim, 
        double                              a_eps, 
-       double                              a_timeStep,
+       double                              a_integrationTime,
        string                              a_baseflowFile,
        RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
        MPI_Comm*                           a_commPtr)
 {
   m_eps             = a_eps;
   m_subspaceDim     = a_subspaceDim;
-  m_timeStep        = a_timeStep;
+  m_integrationTime = a_integrationTime;
   m_baseflowFile    = a_baseflowFile;
   m_solverInterface = a_solverInterfaceFact->create();
 
@@ -50,7 +50,7 @@ define(int                                 a_subspaceDim,
 
   m_solverInterface->setBaseflow(m_baseflowFile);
   m_solverInterface->setEps(m_eps);
-  m_solverInterface->setTimeStepSize(m_timeStep);
+  m_solverInterface->setIntegrationTime(m_integrationTime);
 
   m_isDefined       = true;
 }

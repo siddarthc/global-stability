@@ -50,7 +50,6 @@ private:
 
   // Baseflow parameters
   //
-  bool m_isBaseflowSet;
 
   Vector<LevelData<EBCellFAB>* > m_baseflow;
 

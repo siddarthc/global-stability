@@ -453,12 +453,12 @@ computeDotProduct(double&              a_result,
 /*********/
 /*********/
 int ChomboEpetraOps::
-computeWeightedDotProd(double& a_result,
-                       const Epetra_Vector& a_v1,
-                       const Epetra_Vector& a_v2,
-                       const Epetra_Vector& a_weights,
-                       bool a_unscaleWeights,
-                       double a_domainVolume)
+computeWeightedDotProduct(double& a_result,
+                          const Epetra_Vector& a_v1,
+                          const Epetra_Vector& a_v2,
+                          const Epetra_Vector& a_weights,
+                          bool a_unscaleWeights,
+                          double a_domainVolume)
 {
   Epetra_Vector weightedVec(a_weights);
   weightedVec.PutScalar(0.);

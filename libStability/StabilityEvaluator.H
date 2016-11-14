@@ -121,7 +121,7 @@ private:
 
   int    m_subspaceDim;
   double m_eps;
-  double m_timeStep;
+  double m_integrationTime;
   string m_baseflowFile; 
 
   Epetra_Comm* m_commPtr;
