@@ -27,6 +27,9 @@
 
 #include "ChomboSFDInterface.H"
 
+// for stability runs
+#include "ChomboEpetraOps.H"
+
 #include "NamespaceHeader.H"
 
 ///
@@ -258,6 +261,9 @@ public:
 
   /// set up for restart
   void setupForRestart(const string& a_restartFile);
+
+  // Sid added for Stability solves : 11/16/16
+  void setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData);
 
   /// advance solution.  returns time of final solution
   Real run(Real a_maxTime, int a_maxStep);

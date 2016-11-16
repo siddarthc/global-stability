@@ -29,7 +29,8 @@ public:
 
   virtual ~TrilinosChomboInterface();
   
-  TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact);
+  // if a_incOverlapData is true, the data in coarse-fine overlap region into Epetra Vector is also copied
+  TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData);
 
   void setBaseflow(const std::string& a_baseflowFile);
 
@@ -48,6 +49,8 @@ protected:
 private:
 
   ChomboSolverInterface* m_solverInterface;
+
+  bool                   m_incOverlapData;
 
   // Baseflow parameters
   //

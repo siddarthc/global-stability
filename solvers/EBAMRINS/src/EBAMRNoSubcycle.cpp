@@ -3969,4 +3969,13 @@ setCoveredStuffToZero(LevelData<EBCellFAB>& a_vort)
     }
 }
 
+/*********/
+/*********/
+void EBAMRNoSubcycle::
+setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData)
+{
+
+}
+/*********/
+
 #include "NamespaceFooter.H"

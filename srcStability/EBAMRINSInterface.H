@@ -21,7 +21,6 @@ public:
                     const RefCountedPtr<EBIBCFactory>  a_IBC,
                     const ProblemDomain& a_coarsestDomain,
                     Real                 a_viscosity,
-                    bool                 a_incLevOverlapData,
                     const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance())
   {
     m_isDefined = true;
@@ -29,7 +28,6 @@ public:
     m_ibcFact = a_IBC;
     m_coarsestDomain = a_coarsestDomain;
     m_viscosity = a_viscosity;
-    m_incLevOverlapData = a_incLevOverlapData;
     m_ebisPtr = a_ebisPtr;
     m_refRatio = m_params.m_refRatio;
     m_coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
@@ -55,7 +53,7 @@ public:
   virtual void readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBoxLayout& a_levDBL, const EBISLayout& a_levEBISL, const ProblemDomain& a_domain, std::string a_baseflowFile, HDF5Handle& a_handleIn) const;
 #endif
 
-  virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime) const;
+  virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const;
 
 private:
 
@@ -63,7 +61,6 @@ private:
   RefCountedPtr<EBIBCFactory>  m_ibcFact;
   Real m_viscosity;
   bool m_isDefined;
-  bool m_incLevOverlapData;
 
   EBAMRINSInterface()
   {

@@ -45,7 +45,7 @@ public:
   static void rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                         Epetra_Vector*                       a_EpetraVec,
                                         bool                                 a_incOverlapData = true,
-                                        const Vector<Real>&                  a_refRatio = Vector<Real>());
+                                        const Vector<int>&                   a_refRatio = Vector<int>());
 
 
   // function to put Epetra_Vector's data to Chombo's data Level by Level
@@ -61,7 +61,7 @@ public:
   static void unrollEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                           const Epetra_Vector*           a_EpetraVec,
                                           bool                           a_isOverlapDataInc = true,
-                                          const Vector<Real>&            a_refRatio = Vector<Real>(),
+                                          const Vector<int>&             a_refRatio = Vector<int>(),
                                           double                         a_overlapVal = 0.);
 
 
@@ -82,7 +82,7 @@ public:
                                        const int&                            a_nComp,
                                        const int&                            a_totComp,
                                        bool                                  a_incOverlapData = true,
-                                       const Vector<Real>&                   a_refRatio = Vector<Real>());
+                                       const Vector<int>&                    a_refRatio = Vector<int>());
 
   // get the number of Elements of a_ChomboData on the current proc
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted
@@ -92,7 +92,7 @@ public:
                                     const Vector<EBLevelGrid>&       a_ChomboEBLG,
                                     const int&                       a_nComp,
                                     bool                             a_incOverlapData = true,
-                                    const Vector<Real>&              a_refRatio = Vector<Real>());
+                                    const Vector<int>&               a_refRatio = Vector<int>());
 
 
   // get the Epetra_Map corresponding to the given a_ChomboData and a_commPtr
@@ -104,7 +104,7 @@ public:
                                  const int&                       a_nComp,
                                  const Epetra_Comm*               a_commPtr,
                                  bool                             a_incOverlapData = true,
-                                 const Vector<Real>&              a_refRatio = Vector<Real>());
+                                 const Vector<int>&               a_refRatio = Vector<int>());
 
   // get the weights for each component of the Epetra_Vector to compute weighted L2 norm and weighted inner product.
   // 
@@ -124,7 +124,7 @@ public:
                             const Vector<EBLevelGrid>&       a_ChomboEBLG,
                             const int&                       a_nComp, 
                             const double&                    a_coarsestDx,
-                            const Vector<Real>&              a_refRatio,
+                            const Vector<int>&               a_refRatio,
                             bool                             a_incOverlapData = true);
 
   // compute L2 norm of the Epetra_Vector

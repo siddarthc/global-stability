@@ -17,7 +17,7 @@ void ChomboEpetraOps::
 rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                           Epetra_Vector*                        a_EpetraVec,
                           bool                                  a_incOverlapData,
-                          const Vector<Real>&                   a_refRatio)
+                          const Vector<int>&                    a_refRatio)
 {
   int finestLevel = a_ChomboData.size() - 1;
   int curIndex = -1;
@@ -118,7 +118,7 @@ void ChomboEpetraOps::
 unrollEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                             const Epetra_Vector*            a_EpetraVec,
                             bool                            a_isOverlapDataInc,
-                            const Vector<Real>&             a_refRatio,
+                            const Vector<int>&              a_refRatio,
                             double                          a_overlapVal)
 {
   int finestLevel = a_ChomboData.size() - 1;
@@ -216,7 +216,7 @@ addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
                          const int&                            a_nComp,
                          const int&                            a_totComp,
                          bool                                  a_incOverlapData,
-                         const Vector<Real>&                   a_refRatio)
+                         const Vector<int>&                    a_refRatio)
 {
   CH_assert(a_ChomboData[0]->nComp() >= a_nComp);
 
@@ -323,7 +323,7 @@ getnElementsOnThisProc(const Vector<DisjointBoxLayout>& a_ChomboDBL,
                        const Vector<EBLevelGrid>&       a_ChomboEBLG,
                        const int&                       a_nComp,
                        bool                             a_incOverlapData,
-                       const Vector<Real>&              a_refRatio)
+                       const Vector<int>&               a_refRatio)
 {
   int nLocElem = 0;
   int finestLevel = a_ChomboDBL.size() - 1;
@@ -406,7 +406,7 @@ getEpetraMap(const Vector<DisjointBoxLayout>& a_ChomboDBL,
              const int&                       a_nComp,
              const Epetra_Comm*               a_commPtr,
              bool                             a_incOverlapData,
-             const Vector<Real>&              a_refRatio)
+             const Vector<int>&               a_refRatio)
 {
   int nLocElem = getnElementsOnThisProc(a_ChomboDBL, a_ChomboEBLG, a_nComp, a_incOverlapData);
   Epetra_Map retval(-1, nLocElem, 0, *a_commPtr);
@@ -421,7 +421,7 @@ getVolWeights(Epetra_Vector*                   a_weights,
               const Vector<EBLevelGrid>&       a_ChomboEBLG,
               const int&                       a_nComp,
               const double&                    a_coarsestDx,
-              const Vector<Real>&              a_refRatio,
+              const Vector<int>&               a_refRatio,
               bool                             a_incOverlapData)
 {
   int finestLevel = a_ChomboDBL.size() - 1;

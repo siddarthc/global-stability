@@ -14,13 +14,14 @@
 
 /*********/
 TrilinosChomboInterface::
-TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact)
+TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData)
 {
   m_solverInterface = a_solverInterfaceFact->create();
   m_isBaseflowSet   = false;
   m_isVolWeightsSet = false;
   m_domainVolume    = 0.;
   m_volWeights      = NULL;
+  m_incOverlapData  = a_incOverlapData;
 }
 
 /*********/
@@ -102,7 +103,7 @@ nElementsOnThisProc() const
 {
   CH_assert(isSetupForStabilityRun());
   int nComp = m_solverInterface->nComp();
-  int retval = ChomboEpetraOps::getnElementsOnThisProc(m_baseflowDBL, m_baseflowEBLG, nComp);
+  int retval = ChomboEpetraOps::getnElementsOnThisProc(m_baseflowDBL, m_baseflowEBLG, nComp, m_incOverlapData, m_solverInterface->getRefRatio());
   return retval;
 }
 
@@ -112,7 +113,7 @@ getEpetraMap(const Epetra_Comm* a_commPtr) const
 {
   CH_assert(isSetupForStabilityRun());
   int nComp = m_solverInterface->nComp();
-  Epetra_Map retval = ChomboEpetraOps::getEpetraMap(m_baseflowDBL, m_baseflowEBLG, nComp, a_commPtr);
+  Epetra_Map retval = ChomboEpetraOps::getEpetraMap(m_baseflowDBL, m_baseflowEBLG, nComp, a_commPtr, m_incOverlapData, m_solverInterface->getRefRatio());
   return retval;
 }
 
@@ -139,6 +140,6 @@ void TrilinosChomboInterface::
 computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 {
   CH_assert(isSetupForStabilityRun());
-  m_solverInterface->computeSolution(a_y, a_x, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, m_eps, m_integrationTime);
+  m_solverInterface->computeSolution(a_y, a_x, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, m_eps, m_integrationTime, m_incOverlapData);
 }
 /*********/

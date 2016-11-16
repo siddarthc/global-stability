@@ -93,7 +93,7 @@ readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBox
 /*********/
 /*********/
 void EBAMRINSInterface::
-computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime) const
+computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const
 {
   CH_assert(m_isDefined);
 
@@ -101,9 +101,45 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
   int nComp = this->nComp();
 
   // compute Frechet Derivative 
-  // do f(Ubar + eps*Uprime)
-  // make a_y = f(Ubar + eps*Uprime)
+  
+  // make a_yStar = (f(Ubar + eps*Uprime))/(2*eps)
   {
     EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+    solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
+    int maxStep = 1000000;
+    solver.run(a_integrationTime, maxStep);
+
+    int check1 = a_y.PutScalar(0.);
+    CH_assert(check1 == 0);
+
+    const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+    const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+
+    int nVeloComp = veloSoln[0]->nComp();
+    int nPresComp = presSoln[0]->nComp();
+    int totComp = this->nComp();
+    CH_assert(totComp == nVeloComp + nPresComp);
+
+    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./(2.*a_eps), 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1./(2.*a_eps), nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
+  }
+
+  // make a_y = a_yStar - (f(Ubar - eps*Uprime))/(2*eps)
+  {
+    EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+    solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, -1.*a_eps, a_incOverlapData);
+    int maxStep = 1000000;
+    solver.run(a_integrationTime, maxStep);
+
+    const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+    const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+
+    int nVeloComp = veloSoln[0]->nComp();
+    int nPresComp = presSoln[0]->nComp();
+    int totComp = this->nComp();
+    CH_assert(totComp == nVeloComp + nPresComp);
+
+    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 1., -1./(2.*a_eps), 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 1., -1./(2.*a_eps), nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
   }  
 }
