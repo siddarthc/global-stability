@@ -8,7 +8,6 @@
 #include "TrilinosChomboInterface.H"
 #include "ChomboEpetraOps.H"
 #include "EBEllipticLoadBalance.H"
-#include "EBLevelGrid.H"
 #include "EBCellFactory.H"
 #include "EBAMRDataOps.H"
 #include "CH_HDF5.H"
@@ -31,22 +30,17 @@ TrilinosChomboInterface::
   delete m_solverInterface;
 
   if (m_volWeights != NULL) delete m_volWeights;
-
-  int nlevels = m_baseflow.size();
-  for (int ilev = 0; ilev < nlevels; ilev++)
-  {
-    delete m_baseflow[ilev];
-  }
 }
 
 /*********/
 void TrilinosChomboInterface::
-setBaseflow(std::string a_baseflowFile)
+setBaseflow(const std::string& a_baseflowFile)
 {
+  m_baseflowFile = a_baseflowFile;
 
 #ifdef CH_USE_HDF5
 
-  HDF5Handle handleIn(a_baseflowFile, HDF5Handle::OPEN_RDONLY);
+  HDF5Handle handleIn(m_baseflowFile, HDF5Handle::OPEN_RDONLY);
   HDF5HeaderData header;
   header.readFromFile(handleIn);
 
@@ -59,7 +53,10 @@ setBaseflow(std::string a_baseflowFile)
      MayDay::Warning("TrilinosChomboInterface::setBaseflow - finestLevel from baseflow file is inconsistent with finestLevel from input file. Proceeding with finestLevel from baseflow file");
   }
 
-  m_baseflow.resize(finestLevel+1, NULL);
+//  m_baseflow.resize(finestLevel+1, NULL);
+
+  m_baseflowDBL.resize(finestLevel+1);
+  m_baseflowEBLG.resize(finestLevel+1);
 
   int nGhost = m_solverInterface->getnGhost();
   int nEBGhost = m_solverInterface->getnEBGhost();
@@ -83,20 +80,11 @@ setBaseflow(std::string a_baseflowFile)
     m_solverInterface->getLevelDomain(&levelDomain, ilev);    
 
     EBEllipticLoadBalance(proc_map, vboxGrids, levelDomain, false, ebisPtr);
-    DisjointBoxLayout levelGrids = DisjointBoxLayout(vboxGrids,proc_map);
+    m_baseflowDBL[ilev] = DisjointBoxLayout(vboxGrids, proc_map);
+    m_baseflowEBLG[ilev] = EBLevelGrid(m_baseflowDBL[ilev], levelDomain, nEBGhost, ebisPtr);
 
-    EBLevelGrid levelEBLG = EBLevelGrid(levelGrids, levelDomain, nEBGhost, ebisPtr);
-    EBISLayout levelEBISL = levelEBLG.getEBISL();
- 
-    // define baseflow
-    EBCellFactory ebcellfact(levelEBISL);
-    m_baseflow[ilev] = new LevelData<EBCellFAB>(levelGrids, nComp, nGhost*IntVect::Unit, ebcellfact);
-    EBLevelDataOps::setToZero(*(m_baseflow[ilev]));
-    m_solverInterface->readFileAndCopyToBaseflow(m_baseflow[ilev], levelGrids, levelEBISL, levelDomain, a_baseflowFile, handleIn);
   }
 
-//  EBAMRDataOps::setToZero(m_baseflow);
-//  m_solverInterface->readFileAndCopyToBaseflow(m_baseflow, a_baseflowFile, handleIn);
   m_isBaseflowSet = true;
 
   handleIn.close();
@@ -113,7 +101,8 @@ int TrilinosChomboInterface::
 nElementsOnThisProc() const
 {
   CH_assert(isSetupForStabilityRun());
-  int retval = ChomboEpetraOps::getnElementsOnThisProc(m_baseflow);
+  int nComp = m_solverInterface->nComp();
+  int retval = ChomboEpetraOps::getnElementsOnThisProc(m_baseflowDBL, m_baseflowEBLG, nComp);
   return retval;
 }
 
@@ -122,7 +111,8 @@ Epetra_Map TrilinosChomboInterface::
 getEpetraMap(const Epetra_Comm* a_commPtr) const
 {
   CH_assert(isSetupForStabilityRun());
-  Epetra_Map retval = ChomboEpetraOps::getEpetraMap(m_baseflow, a_commPtr);
+  int nComp = m_solverInterface->nComp();
+  Epetra_Map retval = ChomboEpetraOps::getEpetraMap(m_baseflowDBL, m_baseflowEBLG, nComp, a_commPtr);
   return retval;
 }
 
@@ -149,5 +139,6 @@ void TrilinosChomboInterface::
 computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 {
   CH_assert(isSetupForStabilityRun());
-  m_solverInterface->computeSolution(a_y, a_x, m_baseflow, m_eps, m_integrationTime);
+  m_solverInterface->computeSolution(a_y, a_x, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, m_eps, m_integrationTime);
 }
+/*********/

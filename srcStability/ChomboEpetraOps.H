@@ -13,6 +13,7 @@
 #include "LevelData.H"
 #include "Vector.H"
 #include "EBCellFAB.H"
+#include "EBLevelGrid.H"
 
 ///
 /**
@@ -87,19 +88,23 @@ public:
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted
   // a_refRatio is the refinement ratio between the levels. It is needed only if a_incOverlapData is false
   //
-  static int getnElementsOnThisProc(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
-                                    bool                                  a_incOverlapData = true,
-                                    const Vector<Real>&                   a_refRatio = Vector<Real>());
+  static int getnElementsOnThisProc(const Vector<DisjointBoxLayout>& a_ChomboDBL,
+                                    const Vector<EBLevelGrid>&       a_ChomboEBLG,
+                                    const int&                       a_nComp,
+                                    bool                             a_incOverlapData = true,
+                                    const Vector<Real>&              a_refRatio = Vector<Real>());
 
 
   // get the Epetra_Map corresponding to the given a_ChomboData and a_commPtr
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted
   // a_refRatio is the refinement ratio between the levels. It is needed only if a_incOverlapData is false
   //
-  static Epetra_Map getEpetraMap(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
-                                 const Epetra_Comm*                    a_commPtr,
-                                 bool                                  a_incOverlapData = true,
-                                 const Vector<Real>&                   a_refRatio = Vector<Real>());
+  static Epetra_Map getEpetraMap(const Vector<DisjointBoxLayout>& a_ChomboDBL,
+                                 const Vector<EBLevelGrid>&       a_ChomboEBLG,
+                                 const int&                       a_nComp,
+                                 const Epetra_Comm*               a_commPtr,
+                                 bool                             a_incOverlapData = true,
+                                 const Vector<Real>&              a_refRatio = Vector<Real>());
 
   // get the weights for each component of the Epetra_Vector to compute weighted L2 norm and weighted inner product.
   // 
@@ -113,12 +118,14 @@ public:
   // a_refRatio is the vector of refinement ratios between levels
   // a_incOverlapData determined whether the coarse-fine overlap regions are included
 
-  static void getVolWeights(Epetra_Vector*                       a_weights,
-                            double&                              a_domainVolume,
-                            const Vector<LevelData<EBCellFAB>* > a_ChomboData, 
-                            const double&                        a_coarsestDx,
-                            const Vector<Real>&                  a_refRatio,
-                            bool                                 a_incOverlapData = true);
+  static void getVolWeights(Epetra_Vector*                   a_weights,
+                            double&                          a_domainVolume,
+                            const Vector<DisjointBoxLayout>& a_ChomboDBL,
+                            const Vector<EBLevelGrid>&       a_ChomboEBLG,
+                            const int&                       a_nComp, 
+                            const double&                    a_coarsestDx,
+                            const Vector<Real>&              a_refRatio,
+                            bool                             a_incOverlapData = true);
 
   // compute L2 norm of the Epetra_Vector
   //  just computes the regular unweighted norm

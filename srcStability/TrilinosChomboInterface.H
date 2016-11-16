@@ -14,6 +14,7 @@
 #include "RefCountedPtr.H"
 #include "Vector.H"
 #include "EBCellFAB.H"
+#include "EBLevelGrid.H"
 #include "LevelData.H"
 
 class TrilinosChomboInterface : public TrilinosSolverInterface
@@ -30,7 +31,7 @@ public:
   
   TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact);
 
-  void setBaseflow(std::string a_baseflowFile);
+  void setBaseflow(const std::string& a_baseflowFile);
 
   int nElementsOnThisProc() const;
 
@@ -50,9 +51,9 @@ private:
 
   // Baseflow parameters
   //
-
-  Vector<LevelData<EBCellFAB>* > m_baseflow;
-
+  std::string               m_baseflowFile;
+  Vector<DisjointBoxLayout> m_baseflowDBL;
+  Vector<EBLevelGrid> m_baseflowEBLG;
 
   // for weighted norms and inner products
   Epetra_Vector* m_volWeights;

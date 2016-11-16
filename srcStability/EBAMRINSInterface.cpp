@@ -93,16 +93,17 @@ readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBox
 /*********/
 /*********/
 void EBAMRINSInterface::
-computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<LevelData<EBCellFAB>* >& a_baseflow, double a_eps, double a_integrationTime) const
+computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime) const
 {
   CH_assert(m_isDefined);
 
-  int nlevels = a_baseflow.size();
+  int nlevels = a_baseflowDBL.size();
   int nComp = this->nComp();
+
   // compute Frechet Derivative 
   // do f(Ubar + eps*Uprime)
   // make a_y = f(Ubar + eps*Uprime)
   {
-
+    EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
   }  
 }

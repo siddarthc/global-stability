@@ -319,26 +319,27 @@ addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
 /*********/
 /*********/
 int ChomboEpetraOps::
-getnElementsOnThisProc(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
-                       bool                                  a_incOverlapData,
-                       const Vector<Real>&                   a_refRatio)
+getnElementsOnThisProc(const Vector<DisjointBoxLayout>& a_ChomboDBL,
+                       const Vector<EBLevelGrid>&       a_ChomboEBLG,
+                       const int&                       a_nComp,
+                       bool                             a_incOverlapData,
+                       const Vector<Real>&              a_refRatio)
 {
   int nLocElem = 0;
-  int finestLevel = a_ChomboData.size() - 1;
+  int finestLevel = a_ChomboDBL.size() - 1;
 
   // First, copy the finest level's data
   // scoping begin
   {
-    const LevelData<EBCellFAB>& finestData = *a_ChomboData[finestLevel];
-    int nvar = finestData.nComp(); 
-    const DisjointBoxLayout& finestGrids = finestData.getBoxes();
+    int nvar = a_nComp; 
+    const DisjointBoxLayout& finestGrids = a_ChomboDBL[finestLevel];
+    const EBISLayout&        finestEBISL = a_ChomboEBLG[finestLevel].getEBISL();
     DataIterator finestDit = finestGrids.dataIterator();
     // iterator over the grids on this processor
     for (finestDit.begin(); finestDit.ok(); ++finestDit)
     {
-      const EBCellFAB& ChomboData = finestData[finestDit()];
       const Box& box = finestGrids.get(finestDit());
-      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      const EBISBox& ebisBox = finestEBISL[finestDit()];
       IntVectSet ivs(box);
       for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
       {
@@ -353,19 +354,18 @@ getnElementsOnThisProc(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
 
   for (int ilev = finestLevel-1; ilev >= 0; ilev--)
   {
-    const LevelData<EBCellFAB>& levelData = *a_ChomboData[ilev];
-    int nvar = levelData.nComp();
-    const DisjointBoxLayout& levelGrids = levelData.getBoxes();
-    const DisjointBoxLayout& finerGrids = a_ChomboData[ilev+1]->getBoxes();
+    int nvar = a_nComp;
+    const DisjointBoxLayout& levelGrids = a_ChomboDBL[ilev];
+    const DisjointBoxLayout& finerGrids = a_ChomboDBL[ilev+1];
+    const EBISLayout&        levelEBISL = a_ChomboEBLG[ilev].getEBISL();
     DataIterator levelDit = levelGrids.dataIterator();
     LayoutIterator finerLit = finerGrids.layoutIterator();
 
     // iterator over the grids on this processor
     for (levelDit.begin(); levelDit.ok(); ++levelDit)
     {
-      const EBCellFAB& ChomboData = levelData[levelDit()];
       const Box& thisBox = levelGrids.get(levelDit());
-      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      const EBISBox& ebisBox = levelEBISL[levelDit()];
       IntVectSet ivs(thisBox);
       
      // if a_incOverlapData is false, need to remove the IVs that are already counted at the finerLevel
@@ -401,26 +401,30 @@ getnElementsOnThisProc(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
 /*********/
 /*********/
 Epetra_Map ChomboEpetraOps::
-getEpetraMap(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
-             const Epetra_Comm*                    a_commPtr,
-             bool                                  a_incOverlapData,
-             const Vector<Real>&                   a_refRatio)
+getEpetraMap(const Vector<DisjointBoxLayout>& a_ChomboDBL,
+             const Vector<EBLevelGrid>&       a_ChomboEBLG,
+             const int&                       a_nComp,
+             const Epetra_Comm*               a_commPtr,
+             bool                             a_incOverlapData,
+             const Vector<Real>&              a_refRatio)
 {
-  int nLocElem = getnElementsOnThisProc(a_ChomboData, a_incOverlapData);
+  int nLocElem = getnElementsOnThisProc(a_ChomboDBL, a_ChomboEBLG, a_nComp, a_incOverlapData);
   Epetra_Map retval(-1, nLocElem, 0, *a_commPtr);
   return retval;
 }
 /*********/
 /*********/
 void ChomboEpetraOps::
-getVolWeights(Epetra_Vector*                       a_weights,
-              double&                              a_domainVolume,
-              const Vector<LevelData<EBCellFAB>* > a_ChomboData,
-              const double&                        a_coarsestDx,
-              const Vector<Real>&                  a_refRatio,
-              bool                                 a_incOverlapData)
+getVolWeights(Epetra_Vector*                   a_weights,
+              double&                          a_domainVolume,
+              const Vector<DisjointBoxLayout>& a_ChomboDBL,
+              const Vector<EBLevelGrid>&       a_ChomboEBLG,
+              const int&                       a_nComp,
+              const double&                    a_coarsestDx,
+              const Vector<Real>&              a_refRatio,
+              bool                             a_incOverlapData)
 {
-  int finestLevel = a_ChomboData.size() - 1;
+  int finestLevel = a_ChomboDBL.size() - 1;
   int curIndex = -1;
   int success = 0;
 
@@ -442,16 +446,15 @@ getVolWeights(Epetra_Vector*                       a_weights,
       cellvol *= levelDx;
     }
 
-    const LevelData<EBCellFAB>& finestData = *a_ChomboData[finestLevel];
-    int nvar = finestData.nComp(); 
-    const DisjointBoxLayout& finestGrids = finestData.getBoxes();
+    int nvar = a_nComp; 
+    const DisjointBoxLayout& finestGrids = a_ChomboDBL[finestLevel];
+    const EBISLayout&        finestEBISL = a_ChomboEBLG[finestLevel].getEBISL();
     DataIterator finestDit = finestGrids.dataIterator();
     // iterator over the grids on this processor
     for (finestDit.begin(); finestDit.ok(); ++finestDit)
     {
-      const EBCellFAB& ChomboData = finestData[finestDit()];
       const Box& box = finestGrids.get(finestDit());
-      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      const EBISBox& ebisBox = finestEBISL[finestDit()];
       IntVectSet ivs(box);
       for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
       {
@@ -486,19 +489,18 @@ getVolWeights(Epetra_Vector*                       a_weights,
       cellvol *= levelDx;
     }
 
-    const LevelData<EBCellFAB>& levelData = *a_ChomboData[ilev];
-    int nvar = levelData.nComp();
-    const DisjointBoxLayout& levelGrids = levelData.getBoxes();
-    const DisjointBoxLayout& finerGrids = a_ChomboData[ilev+1]->getBoxes();
+    int nvar = a_nComp;
+    const DisjointBoxLayout& levelGrids = a_ChomboDBL[ilev];
+    const DisjointBoxLayout& finerGrids = a_ChomboDBL[ilev+1];
+    const EBISLayout&        levelEBISL = a_ChomboEBLG[ilev].getEBISL();
     DataIterator levelDit = levelGrids.dataIterator();
     LayoutIterator finerLit = finerGrids.layoutIterator();
 
     // iterator over the grids on this processor
     for (levelDit.begin(); levelDit.ok(); ++levelDit)
     {
-      const EBCellFAB& ChomboData = levelData[levelDit()];
       const Box& thisBox = levelGrids.get(levelDit());
-      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      const EBISBox& ebisBox = levelEBISL[levelDit()];
       IntVectSet ivs(thisBox);
       
       // if a_incOverlapData is false, need to remove the IVs that are already counted at the finerLevel
