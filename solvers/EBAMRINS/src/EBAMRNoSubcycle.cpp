@@ -3432,7 +3432,7 @@ addExtraOutputData(LevelData<EBCellFAB>& a_outputData, const int a_startDstInter
 #ifdef CH_USE_HDF5
 /*****************/
 void
-EBAMRNoSubcycle::writePlotFile()
+EBAMRNoSubcycle::writePlotFile(const std::string* a_pltName)
 {
   CH_TIME("EBAMRNoSubcycle::writePlotFile");
   if (m_params.m_verbosity > 3)
@@ -3476,9 +3476,7 @@ EBAMRNoSubcycle::writePlotFile()
   //For adding extra data
   names.append(extraNames());
 
-  char fileChar[1000];
   int ncells = m_domain[0].size(0);
-  sprintf(fileChar, "plot.nx%d.step.%07d.%dd.hdf5", ncells, m_curStep, SpaceDim);
 
   bool replaceCovered = false;
   Vector<Real> coveredValues;
@@ -3536,7 +3534,17 @@ EBAMRNoSubcycle::writePlotFile()
       setCoveredStuffToZero(*outputData[ilev]);
     }
 
-  string filename(fileChar);
+  string filename;
+  if (a_pltName  == NULL)
+  {
+    char fileChar[1000];
+    sprintf(fileChar, "plot.nx%d.step.%07d.%dd.hdf5", ncells, m_curStep, SpaceDim);
+  }
+  else 
+  {
+    filename = *a_pltName;
+  }
+
   writeEBHDF5(filename,
               m_grids,
               outputData,
@@ -3968,13 +3976,101 @@ setCoveredStuffToZero(LevelData<EBCellFAB>& a_vort)
         }
     }
 }
-
+/*********/
+// Stability routines:
 /*********/
 /*********/
 void EBAMRNoSubcycle::
 setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData)
 {
+  if (m_params.m_verbosity > 3)
+  {
+    pout() << "EBAMRNoSubcycle::setupForStabilityRun" << endl;
+  }
 
+  // turn off regridding
+  m_params.m_regridInterval = -1;
+  m_params.m_doSFD = 0;
+  m_isSetup = true;
+
+  m_finestLevel = a_baseflowDBL.size() - 1;
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    m_grids[ilev] = a_baseflowDBL[ilev];
+  }
+
+  defineEBISLs();
+  defineExtraEBISLs();
+  defineNewVel();
+  definePressure();
+  defineExtraTerms();
+  defineProjections();
+
+  // intialize data for StabilityRun:
+  if (m_params.m_verbosity >= 3)
+  {
+    pout() << "EBAMRNoSubcycle::initialize data for stability run" << endl;
+  }
+
+  EBAMRDataOps::setToZero(m_velo);
+  EBAMRDataOps::setToZero(m_pres);
+  EBAMRDataOps::setToZero(m_gphi);
+
+  // make U = Ubaseflow
+  // copying gphi and advVel also so that there's better initial condition to start with
+#ifdef CH_USE_HDF5
+
+  HDF5Handle handleIn(a_baseflowFile, HDF5Handle::OPEN_RDONLY);
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    handleIn.setGroupToLevel(ilev);
+    read<EBCellFAB>(handleIn, *m_velo[ilev], "velo", m_grids[ilev], Interval(), false);
+    read<EBCellFAB>(handleIn, *m_gphi[ilev], "gphi", m_grids[ilev], Interval(), false);
+    read<EBCellFAB>(handleIn, *m_pres[ilev], "pres", m_grids[ilev], Interval(), false);
+    read<EBFluxFAB>(handleIn, *m_advVel[ilev], "advVel", m_grids[ilev], Interval(), false);
+    readExtraDataFromCheckpoint(handleIn, ilev);
+  }
+
+  handleIn.close();
+
+#else
+
+  MayDay::Error("EBAMRNoSubcycle::setupForStabiltyRun needs HDF5 to read baseflowFile");
+
+#endif 
+
+  // make U = Ubase + a_pertScale*Uprime
+  int nVeloComp = m_velo[0]->nComp();
+  int nPresComp = m_pres[0]->nComp();
+  int ntotComp = nVeloComp + nPresComp;
+
+  ChomboEpetraOps::addEpetraVecToChomboData(m_velo, &a_x, 1., a_pertScale, 0, 0, nVeloComp, ntotComp, a_incOverlapData, m_params.m_refRatio); 
+
+  ChomboEpetraOps::addEpetraVecToChomboData(m_pres, &a_x, 1., a_pertScale, 0, nVeloComp, nPresComp, ntotComp, a_incOverlapData, m_params.m_refRatio);
+
+  // Average down finer levels onto coarser levels if a_incOverlapData is false
+  // just averaging data onto coarse levels. The filtering and flux matching happens in run()
+  if (!a_incOverlapData)
+  {
+    averageDown(m_velo);
+    averageDown(m_pres);
+  }
+  
+  defineIrregularData();
+  postInitialize();
+  m_doRestart = false; 
+}
+/*********/
+void EBAMRNoSubcycle::
+concludeStabilityRun(const std::string* a_pltName)
+{
+
+#ifdef CH_USE_HDF5
+
+  writePlotFile(a_pltName);
+
+#endif
 }
 /*********/
 

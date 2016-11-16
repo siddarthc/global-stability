@@ -21,17 +21,7 @@ public:
                     const RefCountedPtr<EBIBCFactory>  a_IBC,
                     const ProblemDomain& a_coarsestDomain,
                     Real                 a_viscosity,
-                    const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance())
-  {
-    m_isDefined = true;
-    m_params = a_params;
-    m_ibcFact = a_IBC;
-    m_coarsestDomain = a_coarsestDomain;
-    m_viscosity = a_viscosity;
-    m_ebisPtr = a_ebisPtr;
-    m_refRatio = m_params.m_refRatio;
-    m_coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
-  }
+                    const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance());
 
   virtual ~EBAMRINSInterface()
   {
@@ -61,6 +51,8 @@ private:
   RefCountedPtr<EBIBCFactory>  m_ibcFact;
   Real m_viscosity;
   bool m_isDefined;
+
+  static int s_callCounter; // a counter for no. of times computeSolution is called
 
   EBAMRINSInterface()
   {

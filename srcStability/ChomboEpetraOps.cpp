@@ -318,6 +318,107 @@ addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
 }
 /*********/
 /*********/
+void ChomboEpetraOps::
+addEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* > & a_ChomboData,
+                         const Epetra_Vector*             a_v,
+                         const double&                    a_scaleCD,
+                         const double&                    a_scaleV,
+                         const int&                       a_startCompCD,
+                         const int&                       a_startCompV,
+                         const int&                       a_nComp,
+                         const int&                       a_totComp,
+                         bool                             a_incOverlapData,
+                         const Vector<int>&               a_refRatio)
+{
+  CH_assert(a_ChomboData[0]->nComp() >= a_nComp);
+
+  int finestLevel = a_ChomboData.size() - 1;
+  int skip = a_totComp - a_nComp;
+  int curIndex = a_startCompV - skip - 1;
+
+  // First, copy the finest level's data
+  // scoping begin
+  {
+    LevelData<EBCellFAB>& finestData = *a_ChomboData[finestLevel];
+    const DisjointBoxLayout& finestGrids = finestData.getBoxes();
+    DataIterator finestDit = finestGrids.dataIterator();
+    // iterator over the grids on this processor
+    for (finestDit.begin(); finestDit.ok(); ++finestDit)
+    {
+      EBCellFAB& ChomboData = finestData[finestDit()];
+      const Box& box = finestGrids.get(finestDit());
+      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      IntVectSet ivs(box);
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        curIndex += skip;
+        for (int ivar = a_startCompCD; ivar < a_nComp; ivar++)
+        {
+          curIndex++;
+          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          ChomboData(vofit(), ivar) = value;
+        }
+        
+      }
+    }  
+  } // end scoping 
+ 
+  for (int ilev = finestLevel-1; ilev >= 0; ilev--)
+  {
+    LevelData<EBCellFAB>& levelData = *a_ChomboData[ilev];
+    const DisjointBoxLayout& levelGrids = levelData.getBoxes();
+    const DisjointBoxLayout& finerGrids = a_ChomboData[ilev+1]->getBoxes();
+    DataIterator levelDit = levelGrids.dataIterator();
+    LayoutIterator finerLit = finerGrids.layoutIterator();
+
+    // iterator over the grids on this processor
+    for (levelDit.begin(); levelDit.ok(); ++levelDit)
+    {
+      EBCellFAB& ChomboData = levelData[levelDit()];
+      const Box& thisBox = levelGrids.get(levelDit());
+      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      IntVectSet ivs(thisBox);
+      
+      // if a_incOverlapData is false, need to remove the IVs that are already counted at the finerLevel
+      if (!a_incOverlapData)
+      {
+        for (finerLit.begin(); finerLit.ok(); ++finerLit)
+        {
+          Box overlapBox = finerGrids[finerLit];
+          overlapBox.coarsen(a_refRatio[ilev]);
+          overlapBox &= thisBox;
+          // if overlap, remove the overlap IVs
+          if (!overlapBox.isEmpty())
+          {
+            IntVectSet ivsExclude(overlapBox);
+            ivs -= ivsExclude;
+          }
+        }
+      }
+    
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        curIndex += skip;
+        for (int ivar = 0; ivar < a_nComp; ivar++)
+        {
+          curIndex++;
+          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          ChomboData(vofit(), ivar) = value;
+        }
+
+      }  
+    }
+  } 
+
+  if (curIndex != a_v->MyLength()-1)
+  { 
+    string error_msg = "ChomboEpetraOps::addEpetraVecToChomboData : final index = " + SSTR(curIndex) + " is not consistent with the Epetra_Vec length = " + SSTR(a_v->MyLength());
+
+    MayDay::Error(error_msg.c_str());
+  } 
+}
+/*********/
+/*********/
 int ChomboEpetraOps::
 getnElementsOnThisProc(const Vector<DisjointBoxLayout>& a_ChomboDBL,
                        const Vector<EBLevelGrid>&       a_ChomboEBLG,

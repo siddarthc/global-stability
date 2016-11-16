@@ -14,6 +14,7 @@
 #include "StabilityEvaluator.H"
 
 #include "TrilinosChomboInterfaceFactory.H"
+#include "EBAMRINSInterfaceFactory.H"
 
 // Trilinos library includes
 #include "TrilinosSolverInterfaceFactory.H"

@@ -23,14 +23,20 @@ public:
      MayDay::Error("TrilinosChomboInterfaceFactory::invalid constructor");
   }
 
+/*********/
+
   TrilinosChomboInterfaceFactory(RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData)
   {
     m_solverInterfaceFact = a_solverInterfaceFact;
     m_incOverlapData      = a_incOverlapData;
   }
 
+/*********/
+
   virtual ~TrilinosChomboInterfaceFactory()
   {;}
+
+/*********/
 
   Teuchos::RCP<TrilinosSolverInterface> create() const
   {
@@ -40,6 +46,8 @@ public:
 
     return retval;
   }
+
+/*********/
 
 protected:
 

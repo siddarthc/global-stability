@@ -6,6 +6,29 @@
 
 #include "EBAMRINSInterface.H"
 
+#define SSTR( x ) static_cast< std::ostringstream & >( \
+        ( std::ostringstream() << std::dec << x ) ).str()
+
+int EBAMRINSInterface::s_callCounter = -1;
+
+/*********/
+/*********/
+EBAMRINSInterface::
+EBAMRINSInterface(const AMRParameters& a_params,
+                  const RefCountedPtr<EBIBCFactory>  a_IBC,
+                  const ProblemDomain& a_coarsestDomain,
+                  Real                 a_viscosity,
+                  const EBIndexSpace* const a_ebisPtr)
+{
+  m_isDefined = true;
+  m_params = a_params;
+  m_ibcFact = a_IBC;
+  m_coarsestDomain = a_coarsestDomain;
+  m_viscosity = a_viscosity;
+  m_ebisPtr = a_ebisPtr;
+  m_refRatio = m_params.m_refRatio;
+  m_coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
+}
 /*********/
 /*********/
 int EBAMRINSInterface::
@@ -100,6 +123,8 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
   int nlevels = a_baseflowDBL.size();
   int nComp = this->nComp();
 
+  s_callCounter++;
+
   // compute Frechet Derivative 
   
   // make a_yStar = (f(Ubar + eps*Uprime))/(2*eps)
@@ -122,6 +147,9 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./(2.*a_eps), 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1./(2.*a_eps), nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
+
+    std::string pltName = "INS_soln_for_added_pert_at_step"+SSTR(s_callCounter);
+    solver.concludeStabilityRun(&pltName);
   }
 
   // make a_y = a_yStar - (f(Ubar - eps*Uprime))/(2*eps)
@@ -141,5 +169,8 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 1., -1./(2.*a_eps), 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 1., -1./(2.*a_eps), nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
+
+    std::string pltName = "INS_soln_for_subtracted_pert_at_step"+SSTR(s_callCounter);
+    solver.concludeStabilityRun(&pltName);
   }  
 }
