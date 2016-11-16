@@ -103,6 +103,13 @@ rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
         }
       }  
     }
+  }
+
+  if (curIndex != a_EpetraVec->MyLength()-1)
+  { 
+    string error_msg = "ChomboEpetraOps::rollChomboDataToEpetraVec : final index = " + SSTR(curIndex) + " is not consistent with the Epetra_Vec length = " + SSTR(a_EpetraVec->MyLength());
+
+    MayDay::Error(error_msg.c_str());
   } 
 }
 /*********/
@@ -196,6 +203,118 @@ unrollEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* >& a_ChomboData,
 
     MayDay::Error(error_msg.c_str());
   }
+}
+/*********/
+/*********/
+void ChomboEpetraOps::
+addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
+                         const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
+                         const double&                         a_scaleV,
+                         const double&                         a_scaleCD,
+                         const int&                            a_startCompV,
+                         const int&                            a_startCompCD,
+                         const int&                            a_nComp,
+                         const int&                            a_totComp,
+                         bool                                  a_incOverlapData,
+                         const Vector<Real>&                   a_refRatio)
+{
+  CH_assert(a_ChomboData[0]->nComp() >= a_nComp);
+
+  int finestLevel = a_ChomboData.size() - 1;
+  int skip = a_totComp - a_nComp;
+  int curIndex = a_startCompV - skip - 1;
+  int success = 0;
+
+  // First, copy the finest level's data
+  // scoping begin
+  {
+    const LevelData<EBCellFAB>& finestData = *a_ChomboData[finestLevel];
+    const DisjointBoxLayout& finestGrids = finestData.getBoxes();
+    DataIterator finestDit = finestGrids.dataIterator();
+    // iterator over the grids on this processor
+    for (finestDit.begin(); finestDit.ok(); ++finestDit)
+    {
+      const EBCellFAB& ChomboData = finestData[finestDit()];
+      const Box& box = finestGrids.get(finestDit());
+      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      IntVectSet ivs(box);
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        curIndex += skip;
+        for (int ivar = a_startCompCD; ((ivar < a_nComp) && (success == 0)); ivar++)
+        {
+          curIndex++;
+          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          success = a_v->ReplaceMyValues(1, &value, &curIndex);
+        }
+        
+        if (success != 0) 
+        {
+          string error_msg = "ChomboEpetraOps::addChomboDataToEpetraVec : copy failed for level = " + SSTR(finestLevel) + " at index = " + SSTR(curIndex);
+          MayDay::Error(error_msg.c_str());
+        }
+      }
+    }  
+  } // end scoping  
+
+  for (int ilev = finestLevel-1; ilev >= 0; ilev--)
+  {
+    const LevelData<EBCellFAB>& levelData = *a_ChomboData[ilev];
+    const DisjointBoxLayout& levelGrids = levelData.getBoxes();
+    const DisjointBoxLayout& finerGrids = a_ChomboData[ilev+1]->getBoxes();
+    DataIterator levelDit = levelGrids.dataIterator();
+    LayoutIterator finerLit = finerGrids.layoutIterator();
+
+    // iterator over the grids on this processor
+    for (levelDit.begin(); levelDit.ok(); ++levelDit)
+    {
+      const EBCellFAB& ChomboData = levelData[levelDit()];
+      const Box& thisBox = levelGrids.get(levelDit());
+      const EBISBox& ebisBox = ChomboData.getEBISBox();
+      IntVectSet ivs(thisBox);
+      
+      // if a_incOverlapData is false, need to remove the IVs that are already counted at the finerLevel
+      if (!a_incOverlapData)
+      {
+        for (finerLit.begin(); finerLit.ok(); ++finerLit)
+        {
+          Box overlapBox = finerGrids[finerLit];
+          overlapBox.coarsen(a_refRatio[ilev]);
+          overlapBox &= thisBox;
+          // if overlap, remove the overlap IVs
+          if (!overlapBox.isEmpty())
+          {
+            IntVectSet ivsExclude(overlapBox);
+            ivs -= ivsExclude;
+          }
+        }
+      }
+    
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        curIndex += skip;
+        for (int ivar = 0; ((ivar < a_nComp) && (success == 0)); ivar++)
+        {
+          curIndex++;
+          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          success = a_v->ReplaceMyValues(1, &value, &curIndex);
+        }
+
+        if (success != 0)
+        {
+          string error_msg = "ChomboEpetraOps::addChomboDataToEpetraVec : copy failed for level = " + SSTR(ilev) + " at index = " + SSTR(curIndex);
+          MayDay::Error(error_msg.c_str());
+        }
+      }  
+    }
+  } 
+
+  if (curIndex != a_v->MyLength()-1)
+  { 
+    string error_msg = "ChomboEpetraOps::addChomboDataToEpetraVec : final index = " + SSTR(curIndex) + " is not consistent with the Epetra_Vec length = " + SSTR(a_v->MyLength());
+
+    MayDay::Error(error_msg.c_str());
+  } 
 }
 /*********/
 /*********/

@@ -31,6 +31,12 @@ TrilinosChomboInterface::
   delete m_solverInterface;
 
   if (m_volWeights != NULL) delete m_volWeights;
+
+  int nlevels = m_baseflow.size();
+  for (int ilev = 0; ilev < nlevels; ilev++)
+  {
+    delete m_baseflow[ilev];
+  }
 }
 
 /*********/
@@ -53,7 +59,7 @@ setBaseflow(std::string a_baseflowFile)
      MayDay::Warning("TrilinosChomboInterface::setBaseflow - finestLevel from baseflow file is inconsistent with finestLevel from input file. Proceeding with finestLevel from baseflow file");
   }
 
-  m_baseflow.resize(finestLevel+1);
+  m_baseflow.resize(finestLevel+1, NULL);
 
   int nGhost = m_solverInterface->getnGhost();
   int nEBGhost = m_solverInterface->getnEBGhost();
@@ -84,12 +90,13 @@ setBaseflow(std::string a_baseflowFile)
  
     // define baseflow
     EBCellFactory ebcellfact(levelEBISL);
-    m_baseflow[ilev]->define(levelGrids, nComp, nGhost*IntVect::Unit, ebcellfact);
+    m_baseflow[ilev] = new LevelData<EBCellFAB>(levelGrids, nComp, nGhost*IntVect::Unit, ebcellfact);
+    EBLevelDataOps::setToZero(*(m_baseflow[ilev]));
+    m_solverInterface->readFileAndCopyToBaseflow(m_baseflow[ilev], levelGrids, levelEBISL, levelDomain, a_baseflowFile, handleIn);
   }
 
-  EBAMRDataOps::setToZero(m_baseflow);
-
-  m_solverInterface->readFileAndCopyToBaseflow(m_baseflow, a_baseflowFile, handleIn);
+//  EBAMRDataOps::setToZero(m_baseflow);
+//  m_solverInterface->readFileAndCopyToBaseflow(m_baseflow, a_baseflowFile, handleIn);
   m_isBaseflowSet = true;
 
   handleIn.close();

@@ -17,6 +17,7 @@
 ///
 /**
   class to manage CHOMBO Epetra Operations
+  CAUTION: These methods work only if Epetra uses same Map as CHOMBO
  */
 class ChomboEpetraOps
 {
@@ -62,6 +63,25 @@ public:
                                           const Vector<Real>&            a_refRatio = Vector<Real>(),
                                           double                         a_overlapVal = 0.);
 
+
+  // makes a_v = scaleV*a_v + scaleCD*a_ChomboData
+  // a_startCompV is the starting component of a_v
+  // a_startCompCD is the starting comp of a_ChomboData
+  // a_nComp is the number of components to be added
+  // a_totComp is the total no. of components in the a_v (not the length.)
+  // 	For example, if a_v contains velx,vely,velz,pres then totComp = 4
+  // 		and if only the value corresponding to pressure needs to be added, nComp = 1 
+  // 			and startCompV is 3
+  static void addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
+                                       const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
+                                       const double&                         a_scaleV,
+                                       const double&                         a_scaleCD,
+                                       const int&                            a_startCompV,
+                                       const int&                            a_startCompCD,
+                                       const int&                            a_nComp,
+                                       const int&                            a_totComp,
+                                       bool                                  a_incOverlapData = true,
+                                       const Vector<Real>&                   a_refRatio = Vector<Real>());
 
   // get the number of Elements of a_ChomboData on the current proc
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted

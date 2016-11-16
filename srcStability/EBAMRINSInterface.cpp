@@ -11,6 +11,7 @@
 int EBAMRINSInterface::
 getMaxLevelFromParmParse() const
 {
+  CH_assert(m_isDefined);
   return m_params.m_maxLevel;
 }
 /*********/
@@ -18,6 +19,7 @@ getMaxLevelFromParmParse() const
 int EBAMRINSInterface::
 getnEBGhost() const
 {
+  CH_assert(m_isDefined);
   return 6; // to be consistent with EBAMRNoSubcycle::defineEBISLs()
 }
 /*********/
@@ -25,6 +27,7 @@ getnEBGhost() const
 int EBAMRINSInterface::
 getnGhost() const
 {
+  CH_assert(m_isDefined);
   return 3; // to be consistent with EBAMRNoSubcycle::defineNewVel()
 }
 /*********/
@@ -32,6 +35,7 @@ getnGhost() const
 int EBAMRINSInterface::
 nComp() const
 {
+  CH_assert(m_isDefined);
   int retval = SpaceDim + 1; // SpaceDim components of velocity + Pressure
 }
 /*********/
@@ -41,6 +45,8 @@ nComp() const
 void EBAMRINSInterface::
 readFileAndCopyToBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseflow, std::string a_baseflowFile, HDF5Handle& a_handleIn) const
 {
+  CH_assert(m_isDefined);
+
   Interval veloInterv(0,SpaceDim-1);
   int nlevels = a_baseflow.size();
 
@@ -60,6 +66,8 @@ readFileAndCopyToBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseflow, std::strin
 void EBAMRINSInterface::
 readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBoxLayout& a_levDBL, const EBISLayout& a_levEBISL, const ProblemDomain& a_domain, std::string a_baseflowFile, HDF5Handle& a_handleIn) const
 {
+  CH_assert(m_isDefined);
+
   EBCellFactory ebcellfact(a_levEBISL);
 
   { // copy velocity
@@ -87,5 +95,14 @@ readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBox
 void EBAMRINSInterface::
 computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<LevelData<EBCellFAB>* >& a_baseflow, double a_eps, double a_integrationTime) const
 {
+  CH_assert(m_isDefined);
 
+  int nlevels = a_baseflow.size();
+  int nComp = this->nComp();
+  // compute Frechet Derivative 
+  // do f(Ubar + eps*Uprime)
+  // make a_y = f(Ubar + eps*Uprime)
+  {
+
+  }  
 }

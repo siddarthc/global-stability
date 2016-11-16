@@ -75,7 +75,7 @@ protected:
 
   ProblemDomain       m_coarsestDomain;
   Real                m_coarsestDx;
-  Vector<Real>        m_refRatio;
+  Vector<int>         m_refRatio;
   const EBIndexSpace* m_ebisPtr; 
 
 private:
