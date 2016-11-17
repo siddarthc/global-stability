@@ -10,27 +10,24 @@
 
 /*********/
 StabilityEvaluator::
-StabilityEvaluator(int                                 a_subspaceDim, 
-                   double                              a_eps, 
-                   double                              a_timeStep,
+StabilityEvaluator(double                              a_eps, 
+                   double                              a_integrationTime,
                    string                              a_baseflowFile,
                    RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
                    MPI_Comm*                           a_commPtr)
 {
-  define(a_subspaceDim, a_eps, a_timeStep, a_baseflowFile, a_solverInterfaceFact, a_commPtr);
+  define(a_eps, a_integrationTime, a_baseflowFile, a_solverInterfaceFact, a_commPtr);
 }
 
 /*********/
 void StabilityEvaluator:: 
-define(int                                 a_subspaceDim, 
-       double                              a_eps, 
+define(double                              a_eps, 
        double                              a_integrationTime,
        string                              a_baseflowFile,
        RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
        MPI_Comm*                           a_commPtr)
 {
   m_eps             = a_eps;
-  m_subspaceDim     = a_subspaceDim;
   m_integrationTime = a_integrationTime;
   m_baseflowFile    = a_baseflowFile;
   m_solverInterface = a_solverInterfaceFact->create();
@@ -152,6 +149,7 @@ computeDominantModes(double a_tol,
   // Output computed eigenvalues and their direct residuals
   if (a_verbose && m_commPtr->MyPID()==0)
   {
+
     int numritz = (int)ritzValues.size();
     std::cout.setf(std::ios_base::right, std::ios_base::adjustfield);
     std::cout<<std::endl<< "Computed Ritz Values"<< std::endl;
@@ -321,11 +319,3 @@ computeDominantModes(double a_tol,
 }
 
 /*********/
-void StabilityEvaluator::
-exampleRoutine()
-{
-  if (m_commPtr->MyPID () == 0)
-  {
-    std::cout << Epetra_Version () << std::endl << std::endl;
-  }
-}

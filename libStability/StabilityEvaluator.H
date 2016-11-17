@@ -53,39 +53,38 @@ public:
 
   // setup stabilty evaluator:
   // a_solverInterfaceFactory creates the solverInterface to the solver
-  // a_subspaceDim is the Krylov subspace dim
   // a_eps is the magnitude of the perturbation
-  // a_timestep is the time between the snapshots that span Krylov subspace
+  // a_integrationTime is the time between the snapshots that span Krylov subspace
   // a_baseflowFile is the name of the file which contains the baseflow
   // a_solverInterfaceFact is the factory that produces solverInterface when needed
   // if a_comm is NULL, it sets up for serial run else it uses solver's MPI_Comm
 
-  StabilityEvaluator(int                                 a_subspaceDim, 
-                     double                              a_eps, 
-                     double                              a_timeStep,
+  StabilityEvaluator(double                              a_eps, 
+                     double                              a_integrationTime,
                      string                              a_baseflowFile,
                      RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
                      MPI_Comm*                           a_commPtr);
 
   // setup stabilty evaluator:
   // a_solverInterfaceFactory creates the solverInterface to the solver
-  // a_subspaceDim is the Krylov subspace dim
   // a_eps is the magnitude of the perturbation
-  // a_timestep is the time between the snapshots that span Krylov subspace
+  // a_integrationTime is the time between the snapshots that span Krylov subspace
   // a_baseflowFile is the name of file which contains the baseflow
   // a_solverInterfaceFact is the factory that produces solverInterface when needed
   // a_comm is the communication between processors: serial or parallel comm
   // if a_comm is NULL, it sets up for serial run else it uses solver's MPI_Comm
 
-  void define(int                                 a_subspaceDim, 
-              double                              a_eps, 
-              double                              a_timeStep,
+  void define(double                              a_eps, 
+              double                              a_integrationTime,
               string                              a_baseflowFile,
               RCP<TrilinosSolverInterfaceFactory> a_solverInterfaceFact,
               MPI_Comm*                           a_commPtr);
 
   virtual ~StabilityEvaluator();
 
+  // Compute dominant modes using BlockKrylovSchur
+  // 	Krylov subspace dim = a_blockSize*a_numBlocks for symmetricOp
+  // 		and a_blockSize*a_numBlocks+1 for non-symmetricOp
   // a_tol is tolerence for the eigen value solver
   // a_nev is number of eigen values to be computed
   // a_blockSize is the size of the block of vectors
@@ -111,15 +110,11 @@ public:
                            bool   a_isOpSymmetric,
                            bool   a_verbose);
 
-  void
-  exampleRoutine ();
-
 private:
 
   bool m_isDefined;
   bool m_isParallelRun;
 
-  int    m_subspaceDim;
   double m_eps;
   double m_integrationTime;
   string m_baseflowFile; 

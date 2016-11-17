@@ -16,7 +16,7 @@ class EBAMRINSInterfaceFactory : public ChomboSolverInterfaceFactory
 public:
 
   EBAMRINSInterfaceFactory(const AMRParameters& a_params,
-                           const RefCountedPtr<EBIBCFactory>  a_IBC,
+                           const RefCountedPtr<EBIBCFactory>&  a_IBC,
                            const ProblemDomain& a_coarsestDomain,
                            Real                 a_viscosity,
                            const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance())
