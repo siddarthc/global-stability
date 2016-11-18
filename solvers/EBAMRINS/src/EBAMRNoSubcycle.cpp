@@ -3981,7 +3981,7 @@ setCoveredStuffToZero(LevelData<EBCellFAB>& a_vort)
 /*********/
 /*********/
 void EBAMRNoSubcycle::
-setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData)
+setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData, bool a_setupForPlottingData)
 {
   if (m_params.m_verbosity > 3)
   {
@@ -4018,21 +4018,25 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
   EBAMRDataOps::setToZero(m_gphi);
 
   // make U = Ubaseflow
-  // copying gphi and advVel also so that there's better initial condition to start with
+  // copying gphi and advVel also so that there's better initial condition to start with.
+  // Do this only if !a_setupForPlottingData
 #ifdef CH_USE_HDF5
 
-  HDF5Handle handleIn(a_baseflowFile, HDF5Handle::OPEN_RDONLY);
-  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  if (!a_setupForPlottingData)
   {
-    handleIn.setGroupToLevel(ilev);
-    read<EBCellFAB>(handleIn, *m_velo[ilev], "velo", m_grids[ilev], Interval(), false);
-    read<EBCellFAB>(handleIn, *m_gphi[ilev], "gphi", m_grids[ilev], Interval(), false);
-    read<EBCellFAB>(handleIn, *m_pres[ilev], "pres", m_grids[ilev], Interval(), false);
-    read<EBFluxFAB>(handleIn, *m_advVel[ilev], "advVel", m_grids[ilev], Interval(), false);
-    readExtraDataFromCheckpoint(handleIn, ilev);
-  }
+    HDF5Handle handleIn(a_baseflowFile, HDF5Handle::OPEN_RDONLY);
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      handleIn.setGroupToLevel(ilev);
+      read<EBCellFAB>(handleIn, *m_velo[ilev], "velo", m_grids[ilev], Interval(), false);
+      read<EBCellFAB>(handleIn, *m_gphi[ilev], "gphi", m_grids[ilev], Interval(), false);
+      read<EBCellFAB>(handleIn, *m_pres[ilev], "pres", m_grids[ilev], Interval(), false);
+      read<EBFluxFAB>(handleIn, *m_advVel[ilev], "advVel", m_grids[ilev], Interval(), false);
+      readExtraDataFromCheckpoint(handleIn, ilev);
+    }
 
-  handleIn.close();
+    handleIn.close();
+  }
 
 #else
 

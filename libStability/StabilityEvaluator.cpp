@@ -6,7 +6,10 @@
  */
 
 #include "StabilityEvaluator.H"
-#include "Epetra_Version.h"
+#include "AnasaziEpetraSolverAdapter.H"
+
+#define SSTR( x ) static_cast< std::ostringstream & >( \
+        ( std::ostringstream() << std::dec << x ) ).str()
 
 /*********/
 StabilityEvaluator::
@@ -60,14 +63,15 @@ StabilityEvaluator::
 }
 /*********/
 int StabilityEvaluator::
-computeDominantModes(double a_tol,
-                     int    a_nev,
-                     int    a_numBlocks,
-                     int    a_blockSize,
-                     int    a_maxRestarts,
-                     string a_which,
-                     bool   a_isOpSymmetric,
-                     bool   a_verbose)
+computeDominantModes(double      a_tol,
+                     int         a_nev,
+                     int         a_numBlocks,
+                     int         a_blockSize,
+                     int         a_maxRestarts,
+                     string      a_which,
+                     bool        a_isOpSymmetric,
+                     bool        a_verbose,
+                     vector<int> a_plotEVComps)
 {
   int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary;
 
@@ -187,6 +191,19 @@ computeDominantModes(double a_tol,
 
   if (numev > 0)
   {
+    // plot eigenvectors
+    if (a_plotEVComps.size() > 0)
+    {
+      Anasazi::EpetraMultiVecSolverExt* castEigVec = dynamic_cast<Anasazi::EpetraMultiVecSolverExt*>(evecs.get()); 
+      TEUCHOS_TEST_FOR_EXCEPTION( castEigVec==NULL,  std::invalid_argument, "StabilityEvaluator::computeDominantModes cast of MultiVec<double> to EpetraMultiVecSolverExt failed.");
+
+      for (int icomp = 0; icomp < a_plotEVComps.size(); icomp++)
+      {
+        std::string plotName = "plot_computed_evec_comp_" + SSTR(icomp);
+        m_solverInterface->plotEpetraVector(*((*castEigVec)(icomp)), plotName);
+      }
+    }
+
     // Compute residuals
     Teuchos::LAPACK<int,double> lapack;
     std::vector<double> normA(numev);

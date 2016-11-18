@@ -98,9 +98,8 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   InflowOutflowParams ibc_params;
   ParseInflowOutflowParams(ibc_params);
 
-  int iincOverlapData;
-  pp.get("incOverlapData", iincOverlapData);
-  bool incOverlapData = incOverlapData == 1;
+  bool incOverlapData; 
+  pp.get("include_overlap_data", incOverlapData);
 
 //  InflowOutflowIBCFactory ibc(flowDir, inflowVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo);
 
@@ -135,15 +134,21 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   Real evTol;
   int nev, numBlocks, blockSize, maxRestarts;
   std::string sortEV;
-  pp.get("EigenValue_Tol", evTol);
+  pp.get("eigenvalue_tol", evTol);
   pp.get("num_eigenValues", nev);
   pp.get("num_blocks", numBlocks);
   pp.get("block_size", blockSize);
   pp.get("max_restarts", maxRestarts);
   pp.get("sort_EV", sortEV);
 
+  int nplotEVComps;
+  pp.get("plot_num_EVComps", nplotEVComps);
+  std::vector<int> plotEVComps;
+  pp.getarr("plot_EVComps",plotEVComps,0,nplotEVComps);
+  
+
   CH_START(t3);
-  stabEval.computeDominantModes(evTol, nev, numBlocks, blockSize, maxRestarts, sortEV, false, true);
+  stabEval.computeDominantModes(evTol, nev, numBlocks, blockSize, maxRestarts, sortEV, false, true, plotEVComps);
    
 }
 

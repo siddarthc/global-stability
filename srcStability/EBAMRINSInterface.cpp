@@ -5,6 +5,7 @@
  */
 
 #include "EBAMRINSInterface.H"
+#include "ParmParse.H"
 
 #define SSTR( x ) static_cast< std::ostringstream & >( \
         ( std::ostringstream() << std::dec << x ) ).str()
@@ -60,6 +61,7 @@ nComp() const
 {
   CH_assert(m_isDefined);
   int retval = SpaceDim + 1; // SpaceDim components of velocity + Pressure
+  return retval;
 }
 /*********/
 /*********/
@@ -125,12 +127,23 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
   s_callCounter++;
 
+  pout() << "doing y = EBAMRINSOp*x" << endl;
+
   // compute Frechet Derivative 
   
   // make a_yStar = (f(Ubar + eps*Uprime))/(2*eps)
   {
     EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
     solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
+
+    Real fixedDt = 0.;
+    ParmParse pp;
+    pp.query("fixed_dt", fixedDt);
+    if (fixedDt > 1.e-12)
+    {
+      solver.useFixedDt(fixedDt);
+    }
+
     int maxStep = 1000000;
     solver.run(a_integrationTime, maxStep);
 
@@ -148,14 +161,23 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./(2.*a_eps), 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1./(2.*a_eps), nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
 
-    std::string pltName = "INS_soln_for_added_pert_at_step"+SSTR(s_callCounter);
-    solver.concludeStabilityRun(&pltName);
+//    std::string pltName = "INS_soln_for_added_pert_at_step"+SSTR(s_callCounter)+".hdf5";
+//    solver.concludeStabilityRun(&pltName);
   }
 
   // make a_y = a_yStar - (f(Ubar - eps*Uprime))/(2*eps)
   {
     EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
     solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, -1.*a_eps, a_incOverlapData);
+
+    Real fixedDt = 0.;
+    ParmParse pp;
+    pp.query("fixed_dt", fixedDt);
+    if (fixedDt > 1.e-12)
+    {
+      solver.useFixedDt(fixedDt);
+    }
+
     int maxStep = 1000000;
     solver.run(a_integrationTime, maxStep);
 
@@ -170,7 +192,26 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 1., -1./(2.*a_eps), 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 1., -1./(2.*a_eps), nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
 
-    std::string pltName = "INS_soln_for_subtracted_pert_at_step"+SSTR(s_callCounter);
-    solver.concludeStabilityRun(&pltName);
-  }  
+//    std::string pltName = "INS_soln_for_subtracted_pert_at_step"+SSTR(s_callCounter)+".hdf5";
+//    solver.concludeStabilityRun(&pltName);
+  }
+
+  pout() << "computed y = EMAMRINSOp*x" << endl;
+  pout() << "Matrix-Vector Multiplication was computed " << s_callCounter << " times" << endl;
 }
+/*********/
+/*********/
+void EBAMRINSInterface::
+plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_plotName, bool a_incOverlapData) const
+{
+  pout() << "plotting EigenEvector" << endl;
+  EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+
+  std::string baseflowFile = "dummyFile";
+
+  solver.setupForStabilityRun(a_v, a_baseflowDBL, a_baseflowEBLG, baseflowFile, 1.0, a_incOverlapData, true);
+  solver.run(0,0);
+  solver.concludeStabilityRun(&a_plotName);
+}
+/*********/
+/*********/

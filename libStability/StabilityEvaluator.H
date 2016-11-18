@@ -101,14 +101,15 @@ public:
 
   // returns 0 if success
 
-  int computeDominantModes(double a_tol,
-                           int    a_nev,
-                           int    a_numBlocks,
-                           int    a_blockSize,
-                           int    a_maxRestarts,
-                           string a_which,
-                           bool   a_isOpSymmetric,
-                           bool   a_verbose);
+  int computeDominantModes(double      a_tol,
+                           int         a_nev,
+                           int         a_numBlocks,
+                           int         a_blockSize,
+                           int         a_maxRestarts,
+                           string      a_which,
+                           bool        a_isOpSymmetric,
+                           bool        a_verbose,
+                           vector<int> a_plotEVComps);
 
 private:
 

@@ -309,9 +309,11 @@ addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
     }
   } 
 
-  if (curIndex != a_v->MyLength()-1)
+  int checker = curIndex + a_totComp - a_startCompV - a_nComp;
+
+  if (checker != a_v->MyLength()-1)
   { 
-    string error_msg = "ChomboEpetraOps::addChomboDataToEpetraVec : final index = " + SSTR(curIndex) + " is not consistent with the Epetra_Vec length = " + SSTR(a_v->MyLength());
+    string error_msg = "ChomboEpetraOps::addChomboDataToEpetraVec : final index = " + SSTR(checker) + " is not consistent with the Epetra_Vec length = " + SSTR(a_v->MyLength());
 
     MayDay::Error(error_msg.c_str());
   } 
@@ -410,9 +412,10 @@ addEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* > & a_ChomboData,
     }
   } 
 
-  if (curIndex != a_v->MyLength()-1)
+  int checker = curIndex + a_totComp - a_startCompV - a_nComp;
+  if (checker != a_v->MyLength()-1)
   { 
-    string error_msg = "ChomboEpetraOps::addEpetraVecToChomboData : final index = " + SSTR(curIndex) + " is not consistent with the Epetra_Vec length = " + SSTR(a_v->MyLength());
+    string error_msg = "ChomboEpetraOps::addEpetraVecToChomboData : final index = " + SSTR(checker) + " is not consistent with the Epetra_Vec length = " + SSTR(a_v->MyLength());
 
     MayDay::Error(error_msg.c_str());
   } 

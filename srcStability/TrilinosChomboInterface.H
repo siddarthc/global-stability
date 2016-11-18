@@ -44,6 +44,8 @@ public:
 
   void computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const;
 
+  void plotEpetraVector(const Epetra_Vector& a_v, std::string a_plotName) const;
+
 protected:
 
 private:
