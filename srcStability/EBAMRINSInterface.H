@@ -17,10 +17,13 @@ public:
   // a_incLevOverlapData is a flag to determine how data is copied to and from Epetra objects
   //   if a_incLevelOverlapData = true, it includes the overlap data
   //   if false, it only writes fines level's data in the overlap region
+  // a_doFirstOrderDeriv is a flag for order of Frechet Derivative
   EBAMRINSInterface(const AMRParameters& a_params,
                     const RefCountedPtr<EBIBCFactory>  a_IBC,
                     const ProblemDomain& a_coarsestDomain,
                     Real                 a_viscosity,
+                    bool                 a_plotSnapshots,
+                    bool                 a_doFirstOrderFreDeriv,
                     const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance());
 
   virtual ~EBAMRINSInterface()
@@ -45,12 +48,22 @@ public:
 
   virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const;
 
+  virtual void plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_plotName, bool a_incOverlapData) const;
+
+  virtual void getBaseflow(Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_baseflowFile, bool a_incOverlapData) const;
+
+  void getBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseLD, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_baseflowFile, bool a_incOverlapData) const;
+
 private:
 
   AMRParameters m_params;
   RefCountedPtr<EBIBCFactory>  m_ibcFact;
   Real m_viscosity;
   bool m_isDefined;
+  bool m_plotSnapshots;
+  bool m_doFirstOrderFreDeriv;
+
+  Real m_baseflowL2Norm;
 
   static int s_callCounter; // a counter for no. of times computeSolution is called
 

@@ -263,7 +263,7 @@ public:
   void setupForRestart(const string& a_restartFile);
 
   // Sid added for Stability solves : 11/16/16
-  void setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData);
+  void setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData, bool a_setupForPlottingData = false);
 
   void concludeStabilityRun(const std::string* a_pltName);
 

@@ -31,7 +31,7 @@ public:
 
 
   // save the steady state data (solution, grids, etc.)
-  virtual void setBaseflow(const std::string& a_baseflowFile) = 0;
+  virtual void setBaseflow(const std::string& a_baseflowFile, const Epetra_Comm* a_commPtr) = 0;
 
   virtual void setEps(double a_eps)
   {
@@ -60,6 +60,9 @@ public:
   // compute the dot product of the MVs
   // return 0 is successfully computed
   virtual int computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const = 0;
+
+  // plot solution in the Epetra_Vector
+  virtual void plotEpetraVector(const Epetra_Vector& a_v, std::string a_plotName) const = 0;
 
 /*
   bool isLinearSolver()
