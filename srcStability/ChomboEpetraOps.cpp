@@ -6,6 +6,7 @@
  */
 
 #include "ChomboEpetraOps.H"
+#include "SPMDI.H"
 #include <math.h>
 
 #define SSTR( x ) static_cast< std::ostringstream & >( \
@@ -537,8 +538,10 @@ getVolWeights(Epetra_Vector*                   a_weights,
   int success = 0;
 
   Real levelDx = a_coarsestDx;
+  Real coarsestCellVol = 1.;
 
   a_domainVolume = 0.;  
+  Real locDomVol = 0.; // domain volume on this processor
 
   // First, copy the finest level's data
   // scoping begin
@@ -552,6 +555,7 @@ getVolWeights(Epetra_Vector*                   a_weights,
     for (int idir = 0; idir < SpaceDim; idir++)
     {
       cellvol *= levelDx;
+      coarsestCellVol *= a_coarsestDx;
     }
 
     int nvar = a_nComp; 
@@ -568,8 +572,8 @@ getVolWeights(Epetra_Vector*                   a_weights,
       {
         const VolIndex& vof = vofit();
         Real volfrac = ebisBox.volFrac(vof);
-        Real weight = sqrt(1./(volfrac*cellvol));
-        a_domainVolume += volfrac*cellvol;
+        Real weight = sqrt(volfrac*cellvol);
+        locDomVol += volfrac*cellvol;
 
         for (int ivar = 0; ((ivar < nvar) && (success == 0)); ivar++)
         {
@@ -632,8 +636,8 @@ getVolWeights(Epetra_Vector*                   a_weights,
       {
         const VolIndex& vof = vofit();
         Real volfrac = ebisBox.volFrac(vof);
-        Real weight = sqrt(1./(volfrac*cellvol));
-        a_domainVolume += volfrac*cellvol;
+        Real weight = sqrt(volfrac*cellvol);
+        locDomVol += volfrac*cellvol;
 
         for (int ivar = 0; ((ivar < nvar) && (success == 0)); ivar++)
         {
@@ -650,7 +654,22 @@ getVolWeights(Epetra_Vector*                   a_weights,
     }
   } 
 
-  double scalingFactor = sqrt(a_domainVolume/a_weights->GlobalLength());
+  int baseProc = 0;
+  Vector<Real> domVolVec;
+  gather(domVolVec, locDomVol, baseProc);
+
+  if (procID() == baseProc)
+  {
+    CH_assert(domVolVec.size() == numProc());
+    for (int ivec = 0; ivec < domVolVec.size(); ivec++)
+    {
+      a_domainVolume += domVolVec[ivec];
+    }
+  }
+  //broadcast the sum to all processors.
+  broadcast(a_domainVolume, baseProc); 
+
+  double scalingFactor = sqrt(1./coarsestCellVol);
   a_weights->Scale(scalingFactor);
 }
 /*********/
@@ -668,7 +687,10 @@ computeWeightedL2Norm(double&              a_norm,
                       const Epetra_Vector& a_v,
                       const Epetra_Vector& a_weights)
 {
-  return a_v.NormWeighted(a_weights, &a_norm);
+  Epetra_Vector tmpVec(a_v);
+  tmpVec.PutScalar(0.);
+  tmpVec.Multiply(1., a_v, a_weights, 0.); // make tmpVec = a_v*a_weights
+  return tmpVec.Norm2(&a_norm);
 }
 /*********/
 /*********/
@@ -685,47 +707,13 @@ int ChomboEpetraOps::
 computeWeightedDotProduct(double& a_result,
                           const Epetra_Vector& a_v1,
                           const Epetra_Vector& a_v2,
-                          const Epetra_Vector& a_weights,
-                          bool a_unscaleWeights,
-                          double a_domainVolume)
+                          const Epetra_Vector& a_weights)
 {
-  Epetra_Vector weightedVec(a_weights);
-  weightedVec.PutScalar(0.);
-
-  if (!a_unscaleWeights)
-  {
-    // do weightesVec = 0*weightedVec + 1*a_v2.*a_weights
-    weightedVec.Multiply(1., a_v2, a_weights, 0.);
-  }
-
-  else
-  {
-    CH_assert(a_domainVolume > 0.);
-  
-    int locLength = weightedVec.MyLength();
-    int globalLength = weightedVec.GlobalLength(); 
-
-    int success = 0;
-
-    for (int index = 0; ((index < locLength) && (success == 0)); index++)
-    {
-      // assumes weight = (domainVolume/(GlobalLength*cellVolume))^0.5
-      // make value = a_v2.*cellVolume
-      //
-      double value = 1./a_weights[index];
-      value *= value;
-      value *= a_domainVolume;
-      value /= globalLength;
-      value *= a_v2[index];
-      success = weightedVec.ReplaceMyValues(1, &value, &index);
-    }
-
-    if (success != 0)
-    {
-      string error_msg = "ChomboEpetraOps::computeWeightedDotProd : unscaling failed";
-      MayDay::Error(error_msg.c_str());
-    }
-  }
-
-  return a_v1.Dot(weightedVec, &a_result);
+  Epetra_Vector tmpVec1(a_v1);
+  Epetra_Vector tmpVec2(a_v2);
+  tmpVec1.PutScalar(0.);
+  tmpVec2.PutScalar(0.);
+  tmpVec1.Multiply(1., a_v1, a_weights, 0.); // make tmpVec = a_v*a_weights
+  tmpVec2.Multiply(1., a_v2, a_weights, 0.); // make tmpVec = a_v*a_weights
+  return tmpVec1.Dot(tmpVec2, &a_result);
 }

@@ -86,12 +86,12 @@ inflowWhiteNoise = 0.25
 include_overlap_data = true
 do_weighted_norm = false
 baseflow_file = check8500.nx256.2d.hdf5
-perturbation_size = 1.0e-6
+perturbation_size = 1.0e-5
 
 integration_time = 1.0
 #fixed_dt = 0.05
 
-eigenvalue_tol = 1.0e-4
+eigenvalue_tol = 1.0e-6
 num_eigenValues = 1
 
 num_blocks = 6
@@ -99,7 +99,7 @@ block_size = 4
 max_restarts = 20
 sort_EV = LR
 
-do_first_order_fre_deriv = true
+do_first_order_fre_deriv = false
 plot_snapshots = false
 plot_num_EVComps = 1
 plot_EVComps = 0 1 2 3 4

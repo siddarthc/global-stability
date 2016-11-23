@@ -65,7 +65,8 @@ int EBAMRINSInterface::
 nComp() const
 {
   CH_assert(m_isDefined);
-  int retval = SpaceDim + 1; // SpaceDim components of velocity + Pressure
+//  int retval = SpaceDim + 1; // SpaceDim components of velocity + Pressure
+  int retval = SpaceDim; // Only velocity comps; no pressure
   return retval;
 }
 /*********/
@@ -108,7 +109,7 @@ readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBox
     read<EBCellFAB>(a_handleIn, tempLD, "velo", a_levDBL, Interval(), false);
     tempLD.copyTo(srcInterv, *a_levBaseflow, dstInterv);
   } // end velocity 
-
+/*
   { // copy pressure
     int ncomp = 1;
     Interval srcInterv(0,0);
@@ -117,6 +118,7 @@ readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBox
     read<EBCellFAB>(a_handleIn, tempLD, "pres", a_levDBL, Interval(), false);
     tempLD.copyTo(srcInterv, *a_levBaseflow, dstInterv);
   }
+*/
 }
 /*********/
 #endif
@@ -161,10 +163,10 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     int nVeloComp = veloSoln[0]->nComp();
     int nPresComp = presSoln[0]->nComp();
     int totComp = this->nComp();
-    CH_assert(totComp == nVeloComp + nPresComp);
+//    CH_assert(totComp == nVeloComp + nPresComp);
 
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
-    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
+//    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
 
   }
 
@@ -197,10 +199,10 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     int nVeloComp = veloSoln[0]->nComp();
     int nPresComp = presSoln[0]->nComp();
     int totComp = this->nComp();
-    CH_assert(totComp == nVeloComp + nPresComp);
+//    CH_assert(totComp == nVeloComp + nPresComp);
 
     ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 1., -1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
-    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 1., -1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
+//    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 1., -1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
 
   }
 
@@ -266,6 +268,15 @@ getBaseflow(Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, 
   {
     delete baseflow[ilev];
   }
+}
+/*********/
+/*********/
+void EBAMRINSInterface::
+getBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseLD, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_baseflowFile, bool a_incOverlapData) const
+{
+  HDF5Handle handleIn(a_baseflowFile, HDF5Handle::OPEN_RDONLY);
+  readFileAndCopyToBaseflow(a_baseLD, a_baseflowFile, handleIn);
+  handleIn.close();
 }
 /*********/
 /*********/

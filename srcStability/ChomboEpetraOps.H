@@ -130,7 +130,7 @@ public:
   // get the weights for each component of the Epetra_Vector to compute weighted L2 norm and weighted inner product.
   // 
   // check the definition of weighted norm in Epetra_MultiVector doxygen
-  // weight = sqrt(domain volume/(volfrac*cellvol*Epetra_Vector->globallength()) )
+  // weight = sqrt(volfrac*cellvol)/domainVolume
   //
   // a_volWeights is the vector of volfrac*cellArea of all the cells 
   // a_domainVolume is the total volume of the domain
@@ -170,15 +170,9 @@ public:
 
   // compute weights dot product of a_v1 and a_v2: 
   // 		a_result = <a_v1|a_weights|a_v2>
-  // if a_unscale weights is true, it assumes weights are:
-  // 		(V/(n*dv))^0.5, where V is domain volume, n is Global vector length and dv is cell volume
-  // 		weights are unscaled and set to the cell volume dv
-  // if a_unscale is false, it assumes incoming weights are correct
   static int computeWeightedDotProduct(double& a_result,
                                        const Epetra_Vector& a_v1,
                                        const Epetra_Vector& a_v2,
-                                       const Epetra_Vector& a_weights,
-                                       bool a_unscaleWeights = true,
-                                       double a_domainVolume = 0.);
+                                       const Epetra_Vector& a_weights);
 };
 #endif

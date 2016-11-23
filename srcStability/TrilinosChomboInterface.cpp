@@ -158,14 +158,13 @@ computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_r
   int retval;
   if (!m_doWeighting)
   {
-    int retval = ChomboEpetraOps::computeDotProduct(a_result, a_v1, a_v2);
+    retval = ChomboEpetraOps::computeDotProduct(a_result, a_v1, a_v2);
   }
   else
   {
     CH_assert(m_isVolWeightsSet);
     CH_assert(m_volWeights != NULL);
-    bool unscaleWeights = true;
-    retval = ChomboEpetraOps::computeWeightedDotProduct(a_result, a_v1, a_v2, *m_volWeights, unscaleWeights, m_domainVolume);
+    retval = ChomboEpetraOps::computeWeightedDotProduct(a_result, a_v1, a_v2, *m_volWeights);
   }
 
   return retval;
@@ -189,6 +188,7 @@ computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
   pout() << "Base flow L2 norm = " << m_baseflowL2Norm << endl;
   pout() << "vector L2 norm = " << vecNorm << endl;
   pout() << "pert size = " << pertSize << endl;
+  pout() << "domain volume = " << m_domainVolume << endl;
 
   m_solverInterface->computeSolution(a_y, a_x, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, pertSize, m_integrationTime, m_incOverlapData);
 }

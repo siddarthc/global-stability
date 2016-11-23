@@ -4046,12 +4046,13 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
 
   // make U = Ubase + a_pertScale*Uprime
   int nVeloComp = m_velo[0]->nComp();
-  int nPresComp = m_pres[0]->nComp();
-  int ntotComp = nVeloComp + nPresComp;
+//  int nPresComp = m_pres[0]->nComp();
+//  int ntotComp = nVeloComp + nPresComp;
+  int ntotComp = nVeloComp;
 
   ChomboEpetraOps::addEpetraVecToChomboData(m_velo, &a_x, 1., a_pertScale, 0, 0, nVeloComp, ntotComp, a_incOverlapData, m_params.m_refRatio); 
 
-  ChomboEpetraOps::addEpetraVecToChomboData(m_pres, &a_x, 1., a_pertScale, 0, nVeloComp, nPresComp, ntotComp, a_incOverlapData, m_params.m_refRatio);
+//  ChomboEpetraOps::addEpetraVecToChomboData(m_pres, &a_x, 1., a_pertScale, 0, nVeloComp, nPresComp, ntotComp, a_incOverlapData, m_params.m_refRatio);
 
   // Average down finer levels onto coarser levels if a_incOverlapData is false
   // just averaging data onto coarse levels. The filtering and flux matching happens in run()
