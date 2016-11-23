@@ -101,17 +101,26 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   bool incOverlapData; 
   pp.get("include_overlap_data", incOverlapData);
 
+  bool doWeighting;
+  pp.get("do_weighted_norm", doWeighting);
+
+  bool plotSnapshots;
+  pp.get("plot_snapshots", plotSnapshots);
+
+  bool firstOrderFreDeriv;
+  pp.get("do_first_order_fre_deriv", firstOrderFreDeriv);
+
 //  InflowOutflowIBCFactory ibc(flowDir, inflowVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo);
 
   RefCountedPtr<InflowOutflowIBCFactory> ibcFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo));
 
   RefCountedPtr<EBIBCFactory> castIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(ibcFact);
 
-  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, castIBCFact, a_coarsestDomain, viscosity));
+  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, castIBCFact, a_coarsestDomain, viscosity, plotSnapshots, firstOrderFreDeriv));
 
   RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
 
-  Teuchos::RCP<TrilinosChomboInterfaceFactory> ChomboFact = Teuchos::rcp (new TrilinosChomboInterfaceFactory(solverFact, incOverlapData));
+  Teuchos::RCP<TrilinosChomboInterfaceFactory> ChomboFact = Teuchos::rcp (new TrilinosChomboInterfaceFactory(solverFact, incOverlapData, doWeighting));
 
   Teuchos::RCP<TrilinosSolverInterfaceFactory> castChomboFact = static_cast<Teuchos::RCP<TrilinosSolverInterfaceFactory> >(ChomboFact);
 

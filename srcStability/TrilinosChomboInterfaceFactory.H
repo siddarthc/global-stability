@@ -25,10 +25,11 @@ public:
 
 /*********/
 
-  TrilinosChomboInterfaceFactory(RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData)
+  TrilinosChomboInterfaceFactory(RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData, bool a_doWeighting)
   {
     m_solverInterfaceFact = a_solverInterfaceFact;
     m_incOverlapData      = a_incOverlapData;
+    m_doWeighting         = a_doWeighting;
   }
 
 /*********/
@@ -40,7 +41,7 @@ public:
 
   Teuchos::RCP<TrilinosSolverInterface> create() const
   {
-    Teuchos::RCP<TrilinosChomboInterface> ChomboInterface = Teuchos::rcp (new TrilinosChomboInterface (m_solverInterfaceFact, m_incOverlapData) );
+    Teuchos::RCP<TrilinosChomboInterface> ChomboInterface = Teuchos::rcp (new TrilinosChomboInterface (m_solverInterfaceFact, m_incOverlapData, m_doWeighting) );
 
     Teuchos::RCP<TrilinosSolverInterface> retval = static_cast<Teuchos::RCP<TrilinosSolverInterface> > (ChomboInterface);
 
@@ -56,6 +57,7 @@ private:
   RefCountedPtr<ChomboSolverInterfaceFactory> m_solverInterfaceFact;
   
   bool m_incOverlapData;
+  bool m_doWeighting;
 };
 
 #endif

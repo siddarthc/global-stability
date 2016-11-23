@@ -31,7 +31,7 @@ public:
 
 
   // save the steady state data (solution, grids, etc.)
-  virtual void setBaseflow(const std::string& a_baseflowFile) = 0;
+  virtual void setBaseflow(const std::string& a_baseflowFile, const Epetra_Comm* a_commPtr) = 0;
 
   virtual void setEps(double a_eps)
   {

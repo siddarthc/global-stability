@@ -48,9 +48,9 @@ define(double                              a_eps,
     m_isParallelRun = true;
   }
 
-  m_solverInterface->setBaseflow(m_baseflowFile);
   m_solverInterface->setEps(m_eps);
   m_solverInterface->setIntegrationTime(m_integrationTime);
+  m_solverInterface->setBaseflow(m_baseflowFile, m_commPtr);
 
   m_isDefined       = true;
 }

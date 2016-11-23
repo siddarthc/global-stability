@@ -244,7 +244,8 @@ addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
         for (int ivar = a_startCompCD; ((ivar < a_nComp) && (success == 0)); ivar++)
         {
           curIndex++;
-          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          double value = a_scaleV*(*a_v)[curIndex]; 
+          value += a_scaleCD*ChomboData(vofit(), ivar);
           success = a_v->ReplaceMyValues(1, &value, &curIndex);
         }
         
@@ -296,7 +297,8 @@ addChomboDataToEpetraVec(Epetra_Vector*                        a_v,
         for (int ivar = 0; ((ivar < a_nComp) && (success == 0)); ivar++)
         {
           curIndex++;
-          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          double value = a_scaleV*(*a_v)[curIndex];
+          value += a_scaleCD*ChomboData(vofit(), ivar);
           success = a_v->ReplaceMyValues(1, &value, &curIndex);
         }
 
@@ -357,7 +359,8 @@ addEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* > & a_ChomboData,
         for (int ivar = a_startCompCD; ivar < a_nComp; ivar++)
         {
           curIndex++;
-          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          double value = a_scaleV*(*a_v)[curIndex];
+          value += a_scaleCD*ChomboData(vofit(), ivar);
           ChomboData(vofit(), ivar) = value;
         }
         
@@ -404,7 +407,8 @@ addEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* > & a_ChomboData,
         for (int ivar = 0; ivar < a_nComp; ivar++)
         {
           curIndex++;
-          double value = a_scaleV*(*a_v)[curIndex] + a_scaleCD*ChomboData(vofit(), ivar);
+          double value = a_scaleV*(*a_v)[curIndex];
+          value += a_scaleCD*ChomboData(vofit(), ivar);
           ChomboData(vofit(), ivar) = value;
         }
 

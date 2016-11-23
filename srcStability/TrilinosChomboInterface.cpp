@@ -14,14 +14,17 @@
 
 /*********/
 TrilinosChomboInterface::
-TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData)
+TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData, bool a_doWeighting)
 {
-  m_solverInterface = a_solverInterfaceFact->create();
-  m_isBaseflowSet   = false;
-  m_isVolWeightsSet = false;
-  m_domainVolume    = 0.;
-  m_volWeights      = NULL;
-  m_incOverlapData  = a_incOverlapData;
+  m_solverInterface   = a_solverInterfaceFact->create();
+  m_isBaseflowSet     = false;
+  m_isVolWeightsSet   = false;
+  m_domainVolume      = 0.;
+  m_volWeights        = NULL;
+  m_incOverlapData    = a_incOverlapData;
+  m_doWeighting       = a_doWeighting;
+  m_isBaseflowNormSet = false;
+  m_baseflowL2Norm    = -1.;
 }
 
 /*********/
@@ -35,7 +38,7 @@ TrilinosChomboInterface::
 
 /*********/
 void TrilinosChomboInterface::
-setBaseflow(const std::string& a_baseflowFile)
+setBaseflow(const std::string& a_baseflowFile, const Epetra_Comm* a_commPtr)
 {
   m_baseflowFile = a_baseflowFile;
 
@@ -95,6 +98,16 @@ setBaseflow(const std::string& a_baseflowFile)
 
 #endif
 
+  // volWeights:
+  if (m_doWeighting)
+  {
+    Epetra_Map map = getEpetraMap(a_commPtr);
+    m_volWeights = new Epetra_Vector(map);
+    ChomboEpetraOps::getVolWeights(m_volWeights, m_domainVolume, m_baseflowDBL, m_baseflowEBLG, m_solverInterface->nComp(), m_solverInterface->getCoarsestDx(), m_solverInterface->getRefRatio(), m_incOverlapData);
+    m_isVolWeightsSet = true;
+  }
+
+  computeBaseflowNorm(a_commPtr);
 }
 
 /*********/
@@ -122,7 +135,18 @@ int TrilinosChomboInterface::
 computeL2Norm(const Epetra_Vector& a_v, double& a_result) const
 {
   CH_assert(isSetupForStabilityRun());
-  int retval = ChomboEpetraOps::computeL2Norm(a_result, a_v);
+  int retval;
+  if (!m_doWeighting)
+  {
+    retval = ChomboEpetraOps::computeL2Norm(a_result, a_v);
+  }
+  else
+  {
+    CH_assert(m_isVolWeightsSet);
+    CH_assert(m_volWeights != NULL);
+    retval = ChomboEpetraOps::computeWeightedL2Norm(a_result, a_v, *m_volWeights);
+  }
+
   return retval;
 }
 
@@ -131,7 +155,19 @@ int TrilinosChomboInterface::
 computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const
 {
   CH_assert(isSetupForStabilityRun());
-  int retval = ChomboEpetraOps::computeDotProduct(a_result, a_v1, a_v2);
+  int retval;
+  if (!m_doWeighting)
+  {
+    int retval = ChomboEpetraOps::computeDotProduct(a_result, a_v1, a_v2);
+  }
+  else
+  {
+    CH_assert(m_isVolWeightsSet);
+    CH_assert(m_volWeights != NULL);
+    bool unscaleWeights = true;
+    retval = ChomboEpetraOps::computeWeightedDotProduct(a_result, a_v1, a_v2, *m_volWeights, unscaleWeights, m_domainVolume);
+  }
+
   return retval;
 }
 
@@ -140,7 +176,21 @@ void TrilinosChomboInterface::
 computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 {
   CH_assert(isSetupForStabilityRun());
-  m_solverInterface->computeSolution(a_y, a_x, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, m_eps, m_integrationTime, m_incOverlapData);
+  CH_assert(m_isBaseflowNormSet);
+  CH_assert(m_baseflowL2Norm > 0.);
+
+  double vecNorm;
+  computeL2Norm(a_x, vecNorm);
+
+  double pertSize = m_eps*m_baseflowL2Norm/vecNorm; // Theofillis paper
+//  double pertSize = sqrt((1 + m_baseflowL2Norm)*m_eps)/vecNorm; // refer: JFNK: survey of applications... by Knoll and Keyes
+//  double pertSize = m_eps*m_baseflowL2Norm; // refer: https://arxiv.org/pdf/1502.03701.pdf
+
+  pout() << "Base flow L2 norm = " << m_baseflowL2Norm << endl;
+  pout() << "vector L2 norm = " << vecNorm << endl;
+  pout() << "pert size = " << pertSize << endl;
+
+  m_solverInterface->computeSolution(a_y, a_x, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, pertSize, m_integrationTime, m_incOverlapData);
 }
 /*********/
 void TrilinosChomboInterface::
@@ -150,4 +200,19 @@ plotEpetraVector(const Epetra_Vector& a_v, std::string a_plotName) const
   std::string name = a_plotName + ".hdf5";
   m_solverInterface->plotEpetraVector(a_v, m_baseflowDBL, m_baseflowEBLG, name, m_incOverlapData);
 }
+/*********/
+void TrilinosChomboInterface::
+computeBaseflowNorm(const Epetra_Comm* a_commPtr)
+{
+  CH_assert(m_isBaseflowSet)
+  
+  Epetra_Map tmpMap = getEpetraMap(a_commPtr);
+  Epetra_Vector tmpVector(tmpMap);
+
+  m_solverInterface->getBaseflow(tmpVector, m_baseflowDBL, m_baseflowEBLG, m_baseflowFile, m_incOverlapData);
+
+  computeL2Norm(tmpVector, m_baseflowL2Norm); 
+  m_isBaseflowNormSet = true;
+}
+
 /*********/

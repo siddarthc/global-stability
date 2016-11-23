@@ -30,9 +30,10 @@ public:
   virtual ~TrilinosChomboInterface();
   
   // if a_incOverlapData is true, the data in coarse-fine overlap region into Epetra Vector is also copied
-  TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData);
+  // if a_doVolWeighting is true, volume-weighted norms and inner-products are used
+  TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData, bool a_doWeighting);
 
-  void setBaseflow(const std::string& a_baseflowFile);
+  void setBaseflow(const std::string& a_baseflowFile, const Epetra_Comm* a_commPtr);
 
   int nElementsOnThisProc() const;
 
@@ -50,10 +51,12 @@ protected:
 
 private:
 
+  void computeBaseflowNorm(const Epetra_Comm* a_commPtr);
+
   ChomboSolverInterface* m_solverInterface;
 
   bool                   m_incOverlapData;
-
+  bool                   m_doWeighting;
   // Baseflow parameters
   //
   std::string               m_baseflowFile;
@@ -65,6 +68,9 @@ private:
   double         m_domainVolume;
   bool           m_isVolWeightsSet;
 
+  // Baseflow L2 Norm
+  bool m_isBaseflowNormSet;
+  Real m_baseflowL2Norm;
 };
 
 #endif
