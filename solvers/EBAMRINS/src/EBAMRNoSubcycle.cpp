@@ -47,6 +47,9 @@
 extern Real g_simulationTime;
 #define debugIV IntVect(D_DECL(16, 3, 0))
 
+#define SSTR( x ) static_cast< std::ostringstream & >( \
+        ( std::ostringstream() << std::dec << x ) ).str()
+
 /**********************/
 EBAMRNoSubcycle::
 EBAMRNoSubcycle(const AMRParameters&      a_params,
@@ -3537,8 +3540,7 @@ EBAMRNoSubcycle::writePlotFile(const std::string* a_pltName)
   string filename;
   if (a_pltName  == NULL)
   {
-    char fileChar[1000];
-    sprintf(fileChar, "plot.nx%d.step.%07d.%dd.hdf5", ncells, m_curStep, SpaceDim);
+    filename = "plot.nx"+SSTR(ncells)+".step."+SSTR(m_curStep)+"."+SSTR(SpaceDim)+"d.hdf5";
   }
   else 
   {
@@ -4064,7 +4066,9 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
   
   defineIrregularData();
   postInitialize();
-  m_doRestart = false; 
+//  m_doRestart = false; 
+  m_doRestart = true;
+  m_time = 0.;
 }
 /*********/
 void EBAMRNoSubcycle::

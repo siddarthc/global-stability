@@ -206,7 +206,8 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
   }
 
-  double scale = m_doFirstOrderFreDeriv ? 1./a_eps : 0.5/a_eps;
+  double factor = (a_eps < 1.e-12) ? 1. : a_eps;
+  double scale = m_doFirstOrderFreDeriv ? 1./factor : 0.5/factor;
 
   int checkScale = a_y.Scale(scale);
   CH_assert(checkScale == 0);

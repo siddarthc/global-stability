@@ -44,8 +44,8 @@ public:
   //
   static void rollChomboDataToEpetraVec(const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                         Epetra_Vector*                       a_EpetraVec,
-                                        bool                                 a_incOverlapData = true,
-                                        const Vector<int>&                   a_refRatio = Vector<int>());
+                                        bool                                 a_incOverlapData,
+                                        const Vector<int>&                   a_refRatio);
 
 
   // function to put Epetra_Vector's data to Chombo's data Level by Level
@@ -60,8 +60,8 @@ public:
   //
   static void unrollEpetraVecToChomboData(Vector<LevelData<EBCellFAB>* >& a_ChomboData,
                                           const Epetra_Vector*           a_EpetraVec,
-                                          bool                           a_isOverlapDataInc = true,
-                                          const Vector<int>&             a_refRatio = Vector<int>(),
+                                          bool                           a_isOverlapDataInc,
+                                          const Vector<int>&             a_refRatio,
                                           double                         a_overlapVal = 0.);
 
 
@@ -81,8 +81,8 @@ public:
                                        const int&                            a_startCompCD,
                                        const int&                            a_nComp,
                                        const int&                            a_totComp,
-                                       bool                                  a_incOverlapData = true,
-                                       const Vector<int>&                    a_refRatio = Vector<int>());
+                                       bool                                  a_incOverlapData,
+                                       const Vector<int>&                    a_refRatio);
 
   
   // makes a_ChomboData = scaleCD*a_CD + scaleV*a_v;
@@ -102,8 +102,8 @@ public:
                                        const int&                       a_startCompV,
                                        const int&                       a_nComp,
                                        const int&                       a_totComp,
-                                       bool                             a_incOverlapData = true,
-                                       const Vector<int>&               a_refRatio = Vector<int>());
+                                       bool                             a_incOverlapData,
+                                       const Vector<int>&               a_refRatio);
 
   // get the number of Elements of a_ChomboData on the current proc
   // if a_incOverlapData is true, data at the Coarse-Fine overlap is also counted
@@ -112,8 +112,8 @@ public:
   static int getnElementsOnThisProc(const Vector<DisjointBoxLayout>& a_ChomboDBL,
                                     const Vector<EBLevelGrid>&       a_ChomboEBLG,
                                     const int&                       a_nComp,
-                                    bool                             a_incOverlapData = true,
-                                    const Vector<int>&               a_refRatio = Vector<int>());
+                                    bool                             a_incOverlapData,
+                                    const Vector<int>&               a_refRatio);
 
 
   // get the Epetra_Map corresponding to the given a_ChomboData and a_commPtr
@@ -124,8 +124,8 @@ public:
                                  const Vector<EBLevelGrid>&       a_ChomboEBLG,
                                  const int&                       a_nComp,
                                  const Epetra_Comm*               a_commPtr,
-                                 bool                             a_incOverlapData = true,
-                                 const Vector<int>&               a_refRatio = Vector<int>());
+                                 bool                             a_incOverlapData,
+                                 const Vector<int>&               a_refRatio);
 
   // get the weights for each component of the Epetra_Vector to compute weighted L2 norm and weighted inner product.
   // 
@@ -146,7 +146,7 @@ public:
                             const int&                       a_nComp, 
                             const double&                    a_coarsestDx,
                             const Vector<int>&               a_refRatio,
-                            bool                             a_incOverlapData = true);
+                            bool                             a_incOverlapData);
 
   // compute L2 norm of the Epetra_Vector
   //  just computes the regular unweighted norm
