@@ -517,7 +517,7 @@ getEpetraMap(const Vector<DisjointBoxLayout>& a_ChomboDBL,
              bool                             a_incOverlapData,
              const Vector<int>&               a_refRatio)
 {
-  int nLocElem = getnElementsOnThisProc(a_ChomboDBL, a_ChomboEBLG, a_nComp, a_incOverlapData);
+  int nLocElem = getnElementsOnThisProc(a_ChomboDBL, a_ChomboEBLG, a_nComp, a_incOverlapData, a_refRatio);
   Epetra_Map retval(-1, nLocElem, 0, *a_commPtr);
   return retval;
 }
