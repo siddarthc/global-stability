@@ -212,9 +212,13 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
   }
 
+<<<<<<< HEAD
   Real factor = a_eps;
   if (factor < 1e-12) factor = 1.;  
 
+=======
+  double factor = (a_eps < 1.e-12) ? 1. : a_eps;
+>>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
   double scale = m_doFirstOrderFreDeriv ? 1./factor : 0.5/factor;
 
   int checkScale = a_y.Scale(scale);

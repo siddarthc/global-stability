@@ -4,10 +4,17 @@
 #SBATCH -J seval          #Job name
 #SBATCH -o seval.%j.out   # stdout; %j expands jobid
 #SBATCH -e seval.%j.err   # stderr; skip to combine stdout and stderr
+<<<<<<< HEAD
 #SBATCH -p normal        # queue
 #SBATCH -N 44              # Number of nodes, not cores (16 cores/node)
 #SBATCH -n 1056             # Total number of MPI tasks (if omitted, n=N)
 #SBATCH -t 02:42:00       # max time
+=======
+#SBATCH -p development        # queue
+#SBATCH -N 16              # Number of nodes, not cores (16 cores/node)
+#SBATCH -n 256             # Total number of MPI tasks (if omitted, n=N)
+#SBATCH -t 02:00:00       # max time
+>>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
 
 #SBATCH --mail-user=siddarth.chintamani@mavs.uta.edu
 #SBATCH --mail-type=ALL

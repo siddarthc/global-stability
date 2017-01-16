@@ -4130,6 +4130,10 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
   postInitialize();
 //  m_doRestart = false; 
   m_doRestart = true;
+<<<<<<< HEAD
+=======
+  m_time = 0.;
+>>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
 }
 /*********/
 void EBAMRNoSubcycle::
