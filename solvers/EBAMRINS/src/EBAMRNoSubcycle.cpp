@@ -47,6 +47,9 @@
 extern Real g_simulationTime;
 #define debugIV IntVect(D_DECL(16, 3, 0))
 
+#define SSTR( x ) static_cast< std::ostringstream & >( \
+        ( std::ostringstream() << std::dec << x ) ).str()
+
 /**********************/
 EBAMRNoSubcycle::
 EBAMRNoSubcycle(const AMRParameters&      a_params,
@@ -556,6 +559,62 @@ conclude()
   if (m_params.m_plotInterval >= 0)
     {
       writePlotFile();
+
+// Sid added for debug:
+      if (m_doRestart)
+      {
+        Vector<LevelData<EBCellFAB>* > tempData;
+        tempData.resize(m_velo.size());
+        for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+          {
+            EBCellFactory ebcellfact(m_ebisl[ilev]);
+            tempData[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim,  3*IntVect::Unit, ebcellfact); 
+          }
+
+        EBAMRDataOps::setToZero(tempData);
+        string restartFile = "check60000.nx256.2d.hdf5";
+        HDF5Handle handleIn(restartFile, HDF5Handle::OPEN_RDONLY);
+        for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+          {
+            handleIn.setGroupToLevel(ilev);
+            read<EBCellFAB>(handleIn, *tempData[ilev], "velo", m_grids[ilev], Interval(), false);
+          }
+        handleIn.close();
+        EBAMRDataOps::incr(tempData, m_velo, -1.);
+
+        int curNumLevels = m_finestLevel + 1;
+        Vector<string> names(SpaceDim);
+        for (int idir = 0; idir < SpaceDim; idir++)
+        {
+          char velochar[100];
+          sprintf(velochar, "diff_velo%d", idir);
+          names[idir] = string(velochar);
+        }
+        
+        Vector<Real> coveredValues;
+        bool replaceCovered = false;
+
+        string pltName = "plt.diff.hdf5";
+        writeEBHDF5(pltName,
+              m_grids,
+              tempData,
+              names,
+              m_domain[0].domainBox(),
+              m_dx[0],
+              m_dt,
+              m_time,
+              m_params.m_refRatio,
+              curNumLevels,
+              replaceCovered,
+              coveredValues);
+
+        for (int ilev = 0; ilev < tempData.size(); ilev++)
+        {
+          delete tempData[ilev];
+        }
+
+      }
+
     }
 
   if (m_params.m_checkpointInterval >= 0)
@@ -3537,8 +3596,7 @@ EBAMRNoSubcycle::writePlotFile(const std::string* a_pltName)
   string filename;
   if (a_pltName  == NULL)
   {
-    char fileChar[1000];
-    sprintf(fileChar, "plot.nx%d.step.%07d.%dd.hdf5", ncells, m_curStep, SpaceDim);
+    filename = "plot.nx"+SSTR(ncells)+".step."+SSTR(m_curStep)+"."+SSTR(SpaceDim)+"d.hdf5";
   }
   else 
   {
@@ -4060,11 +4118,18 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
   {
     averageDown(m_velo);
     averageDown(m_pres);
+/*
+    Real time = 0.0;
+    m_ccProjector->setTime(time);
+    m_ccProjector->project(m_velo, m_gphi);
+    filter(m_velo);
+*/
   }
   
   defineIrregularData();
   postInitialize();
-  m_doRestart = false; 
+//  m_doRestart = false; 
+  m_doRestart = true;
 }
 /*********/
 void EBAMRNoSubcycle::
