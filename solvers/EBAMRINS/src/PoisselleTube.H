@@ -27,7 +27,6 @@
 #include "PoisselleTubeBCValue.H"
 #include "ExtrapAdvectBC.H"
 
-#include "UsingNamespace.H"
 
 ///
 /**

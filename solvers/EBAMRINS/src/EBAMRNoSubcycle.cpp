@@ -559,7 +559,7 @@ conclude()
   if (m_params.m_plotInterval >= 0)
     {
       writePlotFile();
-
+      
 // Sid added for debug:
       if (m_doRestart)
       {
@@ -568,7 +568,7 @@ conclude()
         for (int ilev = 0; ilev <= m_finestLevel; ilev++)
           {
             EBCellFactory ebcellfact(m_ebisl[ilev]);
-            tempData[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim,  3*IntVect::Unit, ebcellfact); 
+            tempData[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim,  3*IntVect::Unit, ebcellfact);
           }
 
         EBAMRDataOps::setToZero(tempData);
@@ -590,7 +590,7 @@ conclude()
           sprintf(velochar, "diff_velo%d", idir);
           names[idir] = string(velochar);
         }
-        
+
         Vector<Real> coveredValues;
         bool replaceCovered = false;
 
@@ -3384,7 +3384,8 @@ correctVelocity()
                                           m_params.m_refRatio, 0, inorm, EBNormType::OverBoth);
             }
 
-          if (norm[0] < 1.e-8)
+// Sid 12/4/16: changed from L0 norm < 1.e-8 to L2 norm < 1.e-3
+          if (norm[0] < 1.e-3)
             {
               pout() << setprecision(8)
                      << setiosflags(ios::showpoint)
@@ -3396,6 +3397,13 @@ correctVelocity()
             }
           else
             {
+              pout() << setprecision(8)
+                     << setiosflags(ios::showpoint)
+                     << setiosflags(ios::scientific);
+              pout() << "Steady-state velocity" << idir << ": " <<
+                "L_inf = " << norm[0] <<
+                ", L_1 = " << norm[1] <<
+                ", L_2 = " << norm[2] << endl;
               m_steadyState = false;
             }
         }
@@ -4118,22 +4126,13 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
   {
     averageDown(m_velo);
     averageDown(m_pres);
-/*
-    Real time = 0.0;
-    m_ccProjector->setTime(time);
-    m_ccProjector->project(m_velo, m_gphi);
-    filter(m_velo);
-*/
   }
   
   defineIrregularData();
   postInitialize();
 //  m_doRestart = false; 
   m_doRestart = true;
-<<<<<<< HEAD
-=======
   m_time = 0.;
->>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
 }
 /*********/
 void EBAMRNoSubcycle::

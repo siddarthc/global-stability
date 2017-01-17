@@ -7,6 +7,7 @@
  *    Please refer to Copyright.txt, in Chombo's root directory.
  */
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
@@ -447,6 +448,7 @@ getAMRINSParameters(AMRParameters&   a_params,
   ppebamr.query("tag_shrinkdomain" ,a_params.m_tagShrinkDomain);
   ppebamr.query("flow_dir"         ,a_params.m_flowDir);
   ppebamr.query("order_time"       ,a_params.m_orderTimeIntegration);
+
   int ilimit;
   ppebamr.get("use_limiting"         ,ilimit);
   a_params.m_useLimiting = (ilimit==1);
@@ -505,7 +507,6 @@ getAMRINSParameters(AMRParameters&   a_params,
     {
       a_coarsestInputDomain = ProblemDomain(lo, hi);
     }
-
 
   // SFD params
   ppebamr.get("do_SFD", a_params.m_doSFD);
@@ -2788,241 +2789,90 @@ AMRINSGeometry(const AMRParameters&   a_params,
         }
       else if (whichgeom == 26)
         {
-          pout() << "Doing Rectangular-Winglet Vortex Generator Geometry..." << endl;
-          // Begin bottom wall:-
-          Real wallThickness;
-          pp.get("wallThickness", wallThickness);
-          RealVect wallNormal(D_DECL(0.0,-1.0,0.0));
-          RealVect wallPoint(D_DECL(0.0, wallThickness, 0.0));
-          PlaneIF wall(wallNormal, wallPoint, false);
+          pout() << "creating confined counter-jet" << endl;
+          RealVect center(D_DECL(0.0,0.125,0.125));
+          Real outerRadius = 0.125;
+          RealVect cylinderAxis = RealVect::Zero;
+          cylinderAxis[0] = 1.0;
+          TiltedCylinderIF outerTube(outerRadius,cylinderAxis,center,false);
 
-          // Begin vortex generator:-
-          Real startPoint; // distance from inlet
-          Real vgAngle;
-          Real vgHeight;
-          Real vgLength;
-          Real vgThickness;
-          Real vgSpacing;
-          Real domCenter;
-          pp.get("vg_startPoint", startPoint);
-          pp.get("vg_angle", vgAngle); // in radians, counterclockwise
-          pp.get("vg_height", vgHeight);
-          pp.get("vg_length", vgLength);
-          pp.get("vg_thickness", vgThickness);
-          pp.get("vg_spacing", vgSpacing);
-          pp.get("domCenter", domCenter);
+          Real innerRadius = 0.025;
+          TiltedCylinderIF innerTube(innerRadius,cylinderAxis,center,false);
 
-          Real vgAngleL = vgAngle;
-          Real vgAngleR = -vgAngle;
+          Real wallThickness = 0.075;
+          Real wallRadius = innerRadius + wallThickness;
+          TiltedCylinderIF wall(wallRadius,cylinderAxis,center,true);
 
-          // define coordinates of points on the left and right winglets:-
-          Real Lx0 = startPoint + vgLength*cos(vgAngleL);
-          Real Lx1 = startPoint;
-          Real Lx2 = startPoint - vgThickness*sin(vgAngleL);
-          Real Lx3 = startPoint + vgLength*cos(vgAngleL);
-          Real Ly0 = wallThickness + vgHeight;
-          Real Ly1 = wallThickness;
-          Real Ly2 = wallThickness;
-          Real Ly3 = wallThickness;
-          Real Lz0 = domCenter - 0.5*vgSpacing - vgLength*sin(vgAngleL);
-          Real Lz1 = domCenter - 0.5*vgSpacing;
-          Real Lz2 = domCenter - 0.5*vgSpacing - vgThickness*cos(vgAngleL);
-          Real Lz3 = domCenter - 0.5*vgSpacing - vgLength*sin(vgAngleL);
-          Real Rx0 = startPoint + vgLength*cos(vgAngleR);
-          Real Rx1 = startPoint;
-          Real Rx2 = startPoint + vgThickness*sin(vgAngleR);
-          Real Rx3 = startPoint + vgLength*cos(vgAngleR);
-          Real Ry0 = wallThickness + vgHeight;
-          Real Ry1 = wallThickness;
-          Real Ry2 = wallThickness;
-          Real Ry3 = wallThickness;
-          Real Rz0 = domCenter + 0.5*vgSpacing - vgLength*sin(vgAngleR);
-          Real Rz1 = domCenter + 0.5*vgSpacing;
-          Real Rz2 = domCenter + 0.5*vgSpacing + vgThickness*cos(vgAngleR);
-          Real Rz3 = domCenter + 0.5*vgSpacing - vgLength*sin(vgAngleR);
+          RealVect point1(D_DECL(0.0,0.0,0.0));
+          RealVect point2(D_DECL(2.0,0.0,0.0));
+          PlaneIF plane1(cylinderAxis,point1,true);
+          PlaneIF plane2(cylinderAxis,point2,true);
 
-          // define the points :-
-          RealVect pointL1(D_DECL(Lx1, Ly1, Lz1));
-          RealVect pointL2(D_DECL(Lx2, Ly2, Lz2));
-          RealVect pointL3(D_DECL(Lx3, Ly3, Lz3));//right pt on left wing.
-          RealVect pointL4(D_DECL(Lx0, Ly0, Lz0));//top pt on left wing.
-          RealVect pointR1(D_DECL(Rx1, Ry1, Rz1));
-          RealVect pointR2(D_DECL(Rx2, Ry2, Rz2));
-          RealVect pointR3(D_DECL(Rx3, Ry3, Rz3));//right pt on rt wing.
-          RealVect pointR4(D_DECL(Rx0, Ry0, Rz0));//top pt on right wing.
+          IntersectionIF tube1(wall,innerTube);
+          IntersectionIF tube2(plane2,tube1);
+          IntersectionIF tube3(plane1,outerTube);
 
-          RealVect vortGenL1Normal(D_DECL(1.0*sin(vgAngleL), 0.0, 1.0*cos(vgAngleL)));
-          RealVect vortGenL2Normal(D_DECL(-1.0*sin(vgAngleL), 0.0, -1.0*cos(vgAngleL)));
-          RealVect vortGenL3Normal(D_DECL(-1.0*cos(vgAngleL), 0.0, 1.0*sin(vgAngleL)));
-          RealVect vortGenL4Normal(D_DECL(1.0*cos(vgAngleL), 0.0, -1.0*sin(vgAngleL)));
+          UnionIF tube4(tube2,tube3);
+          ComplementIF domain(tube4,true);
 
-          RealVect vortGenR1Normal(D_DECL(1.0*sin(vgAngleR), 0.0, 1.0*cos(vgAngleR)));
-          RealVect vortGenR2Normal(D_DECL(-1.0*sin(vgAngleR), 0.0, -1.0*cos(vgAngleR)));
-          RealVect vortGenR3Normal(D_DECL(-1.0*cos(vgAngleR), 0.0, 1.0*sin(vgAngleR)));
-          RealVect vortGenR4Normal(D_DECL(1.0*cos(vgAngleR), 0.0, -1.0*sin(vgAngleR)));
+/*
+          RealVect sym1Axis = RealVect::Zero;
+          sym1Axis[1] = 1.0;
+ 
+          // hardwiring for 3D
+          RealVect sym2Axis = RealVect::Zero;
+          sym2Axis[2] = 1.0;
 
-          PlaneIF vortGenR1(vortGenR1Normal, pointR1, false);
-          PlaneIF vortGenR2(vortGenR2Normal, pointR2, false);
-          PlaneIF vortGenR3(wallNormal, pointR4, false);
-          PlaneIF vortGenRS1(vortGenR3Normal, pointR1, true);
-          PlaneIF vortGenRS2(vortGenR4Normal, pointR3, true);
+          PlaneIF sym1(sym1Axis,point1,true);
+          PlaneIF sym2(sym2Axis,point1,true);
 
-          PlaneIF vortGenL1(vortGenL1Normal, pointL1, true);
-          PlaneIF vortGenL2(vortGenL2Normal, pointL2, true);
-          PlaneIF vortGenL3(wallNormal, pointL4, false);
-          PlaneIF vortGenLS1(vortGenL3Normal, pointL1, true);
-          PlaneIF vortGenLS2(vortGenL4Normal, pointL3, true);
+          IntersectionIF domain1(domain,sym1);
+          IntersectionIF domain2(domain1,sym2);
+*/
+          bool verbosity = false;
+          RealVect vectDx = RealVect::Unit;
+          vectDx *= fineDx;
+          GeometryShop workshop(domain,verbosity,vectDx);
 
-          UnionIF domR(vortGenR1, vortGenR2);
-          UnionIF domRTest(vortGenRS1, vortGenRS2);
-          UnionIF domRTest1(domRTest, domR);
-          UnionIF domRTest2(domRTest1, vortGenR3);
-
-          UnionIF domL(vortGenL1, vortGenL2);
-          UnionIF domLTest(vortGenLS1, vortGenLS2);
-          UnionIF domLTest1(domLTest, domL);
-          UnionIF domLTest2(domLTest1, vortGenL3);
-
-          IntersectionIF wallRTest(wall, domRTest2);
-          IntersectionIF domain(wallRTest, domLTest2);
-
-          GeometryShop workshop(domain,verbosity,fineDx*IntVect::Unit);
-          a_ebisPtr->define(finestDomain, origin, fineDx, workshop, ebMaxSize, ebMaxCoarsen);
-
+          a_ebisPtr->define(finestDomain, origin, fineDx, workshop, ebMaxSize);
         }
       else if (whichgeom == 27)
         {
-          pout() << "Doing Delta-Winglet Vortex Generator Geometry..." << endl;
-          // Begin bottom wall:-
-          Real wallThickness;
-          pp.get("wallThickness", wallThickness);
-          RealVect wallNormal(D_DECL(0.0,-1.0,0.0));
-          RealVect wallPoint(D_DECL(0.0, wallThickness, 0.0));
-          PlaneIF wall(wallNormal, wallPoint, false);
+          pout() << "creating bulk-flow counter-jet" << endl;
+          Real jetRadius,wallThickness;
+          RealVect jetCenter = RealVect::Zero; 
+          RealVect jetDistance = RealVect::Zero; // distance of jet from inlet
+          Vector<Real> jet_center, jet_distance;
 
-          // Begin vortex generator:-
-          Real startPoint; // distance from inlet
-          Real vgAngle;
-          Real vgHeight;
-          Real vgLength;
-          Real vgThickness;
-          Real vgSpacing;
-          Real domCenter;
-          pp.get("vg_startPoint", startPoint);
-          pp.get("vg_angle", vgAngle); // in radians, counterclockwise
-          pp.get("vg_height", vgHeight);
-          pp.get("vg_length", vgLength);
-          pp.get("vg_thickness", vgThickness);
-          pp.get("vg_spacing", vgSpacing);
-          pp.get("domCenter", domCenter);
+          pp.get ("jet_radius", jetRadius); // radius of jet
+          pp.get ("wall_thickness", wallThickness);  
+          pp.getarr("jet_center",jet_center,0,SpaceDim);
+          pp.getarr("jet_distance",jet_distance,0,SpaceDim);
 
-          Real vgAngleL = vgAngle;
-          Real vgAngleR = -vgAngle;
+          for (int idir = 0; idir < SpaceDim; idir++)
+            {
+              jetCenter[idir] = jet_center[idir];
+              jetDistance[idir] = jet_distance[idir];
+            }  
 
-          // define coordinates of points on the left and right winglets:-
-          Real Lx0 = startPoint + vgLength*cos(vgAngleL);
-          Real Lx1 = startPoint;
-          Real Lx2 = startPoint - vgThickness*sin(vgAngleL);
-          Real Lx3 = startPoint + vgLength*cos(vgAngleL);
-          Real Ly0 = wallThickness + vgHeight;
-          Real Ly1 = wallThickness;
-          Real Ly2 = wallThickness;
-          Real Ly3 = wallThickness;
-          Real Lz0 = domCenter - 0.5*vgSpacing - vgLength*sin(vgAngleL);
-          Real Lz1 = domCenter - 0.5*vgSpacing;
-          Real Lz2 = domCenter - 0.5*vgSpacing - vgThickness*cos(vgAngleL);
-          Real Lz3 = domCenter - 0.5*vgSpacing - vgLength*sin(vgAngleL);
-          Real Rx0 = startPoint + vgLength*cos(vgAngleR);
-          Real Rx1 = startPoint;
-          Real Rx2 = startPoint + vgThickness*sin(vgAngleR);
-          Real Rx3 = startPoint + vgLength*cos(vgAngleR);
-          Real Ry0 = wallThickness + vgHeight;
-          Real Ry1 = wallThickness;
-          Real Ry2 = wallThickness;
-          Real Ry3 = wallThickness;
-          Real Rz0 = domCenter + 0.5*vgSpacing - vgLength*sin(vgAngleR);
-          Real Rz1 = domCenter + 0.5*vgSpacing;
-          Real Rz2 = domCenter + 0.5*vgSpacing + vgThickness*cos(vgAngleR);
-          Real Rz3 = domCenter + 0.5*vgSpacing - vgLength*sin(vgAngleR);
+          RealVect axis = RealVect::Zero;
+          axis[0] = -1.0;
+          Real sum;
+          PolyGeom::unifyVector(axis, sum);
 
-          // find normal to the vg inclined plane:-
-          Real La = (Lz1 - Lz0)*(Ly2 - Ly0) - (Ly1 - Ly0)*(Lz2 - Lz0);
-          Real Lb = (Lx0 - Lx2)*(Lz1 - Lz0) - (Lz0 - Lz2)*(Lx1 - Lx0);
-          Real Lc = (Lx2 - Lx0)*(Ly1 - Ly0) - (Ly2 - Ly0)*(Lx1 - Lx0);
-          Real Ra = (Rz1 - Rz0)*(Ry2 - Ry0) - (Ry1 - Ry0)*(Rz2 - Rz0);
-          Real Rb = (Rx0 - Rx2)*(Rz1 - Rz0) - (Rz0 - Rz2)*(Rx1 - Rx0);
-          Real Rc = (Rx2 - Rx0)*(Ry1 - Ry0) - (Ry2 - Ry0)*(Rx1 - Rx0);
+          TiltedCylinderIF tube(jetRadius,axis,jetCenter,true);
+          Real wallRadius = jetRadius + wallThickness;
+          TiltedCylinderIF wall(wallRadius,axis,jetCenter,false);
+          UnionIF jet(wall,tube);
+ 
+          PlaneIF chopPlane(axis,jetDistance,true);
+          UnionIF domain(chopPlane,jet);
 
-          // normalize the normal coefficients:-
-          Real nLa = La/sqrt(La*La + Lb*Lb + Lc*Lc);
-          Real nLb = Lb/sqrt(La*La + Lb*Lb + Lc*Lc);
-          Real nLc = Lc/sqrt(La*La + Lb*Lb + Lc*Lc);
-          Real nRa = Ra/sqrt(Ra*Ra + Rb*Rb + Rc*Rc);
-          Real nRb = Rb/sqrt(Ra*Ra + Rb*Rb + Rc*Rc);
-          Real nRc = Rc/sqrt(Ra*Ra + Rb*Rb + Rc*Rc);
-
-          // define the points :-
-          RealVect pointL1(D_DECL(Lx1, Ly1, Lz1));
-          RealVect pointL2(D_DECL(Lx2, Ly2, Lz2));
-          RealVect pointL3(D_DECL(Lx3, Ly3, Lz3));//right pt on left wing.
-          RealVect pointL4(D_DECL(Lx0, Ly0, Lz0));//top pt on left wing.
-          RealVect pointR1(D_DECL(Rx1, Ry1, Rz1));
-          RealVect pointR2(D_DECL(Rx2, Ry2, Rz2));
-          RealVect pointR3(D_DECL(Rx3, Ry3, Rz3));//right pt on rt wing.
-          RealVect pointR4(D_DECL(Rx0, Ry0, Rz0));//top pt on right wing.
-
-          // Define normal to the surfaces:-
-          RealVect vortGenL1Normal(D_DECL(1.0*sin(vgAngleL), 0.0, 1.0*cos(vgAngleL)));
-          RealVect vortGenL2Normal(D_DECL(-1.0*sin(vgAngleL), 0.0, -1.0*cos(vgAngleL)));
-          RealVect vortGenL3Normal(D_DECL(-1.0*cos(vgAngleL), 0.0, 1.0*sin(vgAngleL)));
-          RealVect vortGenL4Normal(D_DECL(1.0*cos(vgAngleL), 0.0, -1.0*sin(vgAngleL)));
-          RealVect vortGenL5Normal(D_DECL(nLa, nLb, nLc));
-
-          RealVect vortGenR1Normal(D_DECL(1.0*sin(vgAngleR), 0.0, 1.0*cos(vgAngleR)));
-          RealVect vortGenR2Normal(D_DECL(-1.0*sin(vgAngleR), 0.0, -1.0*cos(vgAngleR)));
-          RealVect vortGenR3Normal(D_DECL(-1.0*cos(vgAngleR), 0.0, 1.0*sin(vgAngleR)));
-          RealVect vortGenR4Normal(D_DECL(1.0*cos(vgAngleR), 0.0, -1.0*sin(vgAngleR)));
-          RealVect vortGenR5Normal(D_DECL(nRa, nRb, nRc));
-
-          RealVect topPlanePoint(D_DECL(0.0, vgHeight, 0.0));
-
-          // Create corresponding planes:-
-          PlaneIF vortGenR1(vortGenR1Normal, pointR1, false);
-          PlaneIF vortGenR2(vortGenR2Normal, pointR2, false);
-          PlaneIF vortGenR3(wallNormal, pointR4, false);
-          PlaneIF vortGenRS1(vortGenR3Normal, pointR1, true);
-          PlaneIF vortGenRS2(vortGenR4Normal, pointR3, true);
-          PlaneIF vortGenRT(vortGenR5Normal, pointR4, false);
-
-          PlaneIF vortGenL1(vortGenL1Normal, pointL1, true);
-          PlaneIF vortGenL2(vortGenL2Normal, pointL2, true);
-          PlaneIF vortGenL3(wallNormal, pointL4, false);
-          PlaneIF vortGenLS1(vortGenL3Normal, pointL1, true);
-          PlaneIF vortGenLS2(vortGenL4Normal, pointL3, true);
-          PlaneIF vortGenLT(vortGenL5Normal, pointL4, true);
-
-          //take unions of all the right wing planes:-
-          UnionIF domR(vortGenR1, vortGenR2);
-          UnionIF domRTest(vortGenRS1, vortGenRS2);
-          UnionIF domRTest1(domRTest, domR);
-          UnionIF rightVG(domRTest1, vortGenRT);
-
-          //take unions of all the left wing planes:-
-          UnionIF domL(vortGenL1, vortGenL2);
-          UnionIF domLTest(vortGenLS1, vortGenLS2);
-          UnionIF domLTest1(domLTest, domL);
-          UnionIF leftVG(domLTest1, vortGenLT);
-
-          IntersectionIF wallRTest(wall, rightVG);
-          UnionIF wallRTest1(wallRTest , vortGenR3);
-
-          IntersectionIF wallLTest(wall, leftVG);
-          UnionIF wallLTest1(wallLTest , vortGenL3);
-
-          IntersectionIF domain(wallRTest1, wallLTest1);
-
-          GeometryShop workshop(domain,verbosity,fineDx*RealVect::Unit);
-          a_ebisPtr->define(finestDomain, origin, fineDx, workshop, ebMaxSize, ebMaxCoarsen);
+          bool verbosity = false;
+          RealVect vectDx = RealVect::Unit;
+          vectDx *= fineDx;
+          GeometryShop workshop(domain,verbosity,vectDx);
+          a_ebisPtr->define(finestDomain, origin, fineDx, workshop, ebMaxSize); 
         }
       else
         {

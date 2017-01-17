@@ -16,8 +16,6 @@
 #include "EBLevelDataOps.H"
 #include "ParmParse.H"
 
-#include "UsingNamespace.H"
-
 /***/
 RefCountedPtr<BaseEBBCFactory>
 PoisselleTube::getPressureEBBC()  const

@@ -17,8 +17,6 @@
 #include "Stencils.H"
 #include "VoFIterator.H"
 
-#include "UsingNamespace.H"
-
 void
 PoisselleTubePoissonDomainBC::
 getFaceVel(Real&                 a_faceFlux,

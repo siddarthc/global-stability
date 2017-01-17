@@ -318,12 +318,6 @@ public:
     return m_dt;
   }
 
-  // return simulation time
-  Real getSimTime()
-  {
-    return m_time;
-  }
-
   Vector< LayoutData< Vector< Vector<VolIndex> > >* >& getCoveredFaceLo()
   {
     return m_coveredFaceLitLo;

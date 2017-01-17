@@ -143,12 +143,6 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
     solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
 
-/*
-    solver.setupForRestart(a_baseflowFile);
-    Real curTime = solver.getSimTime();
-    Real endTime = curTime + a_integrationTime;
-*/
-
     Real fixedDt = 0.;
     ParmParse pp;
     pp.query("fixed_dt", fixedDt);
@@ -157,7 +151,7 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
       solver.useFixedDt(fixedDt);
     }
 
-    int maxStep = 100000;
+    int maxStep = 1000000;
     solver.run(a_integrationTime, maxStep);
 
     int check1 = a_y.PutScalar(0.);
@@ -196,7 +190,7 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
       solver.useFixedDt(fixedDt);
     }
 
-    int maxStep = 100000;
+    int maxStep = 1000000;
     solver.run(a_integrationTime, maxStep);
 
     const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
@@ -212,13 +206,7 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
   }
 
-<<<<<<< HEAD
-  Real factor = a_eps;
-  if (factor < 1e-12) factor = 1.;  
-
-=======
   double factor = (a_eps < 1.e-12) ? 1. : a_eps;
->>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
   double scale = m_doFirstOrderFreDeriv ? 1./factor : 0.5/factor;
 
   int checkScale = a_y.Scale(scale);

@@ -93,3 +93,4 @@ private:
 
 #include "NamespaceFooter.H"
 #endif
+
