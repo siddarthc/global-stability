@@ -86,11 +86,7 @@ inflowWhiteNoise = 0.5
 #params for stabilityTests
 include_overlap_data = true
 do_weighted_norm = false
-<<<<<<< HEAD
 baseflow_file = check60000.nx256.2d.hdf5
-=======
-baseflow_file = check40000.nx256.2d.hdf5
->>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
 perturbation_size = 1.0e-4
 #perturbation_size = 0.0
 
@@ -102,18 +98,12 @@ num_eigenValues = 2
 
 num_blocks = 63
 block_size = 1
-<<<<<<< HEAD
-max_restarts = 4
-sort_EV = LM
 
-do_first_order_fre_deriv = false
-plot_snapshots = false
-=======
 max_restarts = 3
 sort_EV = LM
 
 do_first_order_fre_deriv = false
-plot_snapshots = true
->>>>>>> 2fbb76947dfb8d1c9f49dab7b39fa9aa9cb17b95
+plot_snapshots = false
+
 plot_num_EVComps = 2
 plot_EVComps = 0 1 2 3 4
