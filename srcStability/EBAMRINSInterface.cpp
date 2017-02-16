@@ -21,6 +21,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
                   const ProblemDomain& a_coarsestDomain,
                   Real                 a_viscosity,
                   bool                 a_plotSnapshots,
+                  bool                 a_doLinINS,
                   bool                 a_doFirstOrderFreDeriv,
                   const EBIndexSpace* const a_ebisPtr)
 {
@@ -33,6 +34,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
   m_refRatio = m_params.m_refRatio;
   m_coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
   m_plotSnapshots = a_plotSnapshots;
+  m_doLinINS = a_doLinINS;
   m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
 }
 /*********/
@@ -136,81 +138,90 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
   pout() << "doing y = EBAMRINSOp*x" << endl;
 
-  // compute Frechet Derivative 
-  
-  // make a_yStar = (f(Ubar + eps*Uprime))
+  if (m_doLinINS)
   {
-    EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
-    solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
+    MayDay::Error("LinINS not setup");
+  } 
 
-    Real fixedDt = 0.;
-    ParmParse pp;
-    pp.query("fixed_dt", fixedDt);
-    if (fixedDt > 1.e-12)
+  else
+  {
     {
-      solver.useFixedDt(fixedDt);
-    }
+      // compute Frechet Derivative 
+  
+      // make a_yStar = (f(Ubar + eps*Uprime))
+      EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+      solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
 
-    int maxStep = 1000000;
-    solver.run(a_integrationTime, maxStep);
+      Real fixedDt = 0.;
+      ParmParse pp;
+      pp.query("fixed_dt", fixedDt);
+      if (fixedDt > 1.e-12)
+      {
+        solver.useFixedDt(fixedDt);
+      }
 
-    int check1 = a_y.PutScalar(0.);
-    CH_assert(check1 == 0);
+      int maxStep = 1000000;
+      solver.run(a_integrationTime, maxStep);
 
-    const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
-    const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+      int check1 = a_y.PutScalar(0.);
+      CH_assert(check1 == 0);
 
-    int nVeloComp = veloSoln[0]->nComp();
-    int nPresComp = presSoln[0]->nComp();
-    int totComp = this->nComp();
+      const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+
+      int nVeloComp = veloSoln[0]->nComp();
+      int nPresComp = presSoln[0]->nComp();
+      int totComp = this->nComp();
 //    CH_assert(totComp == nVeloComp + nPresComp);
 
-    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
 //    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
 
-  }
-
-  if (m_doFirstOrderFreDeriv) // make a_y = a_yStar - f(Ubar)
-  {
-    Epetra_Vector baseflowVec(a_x);
-    getBaseflow(baseflowVec, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_incOverlapData); 
-    a_y.Update(-1., baseflowVec, 1.);
-  }
-  else // make a_y = a_yStar - (f(Ubar - eps*Uprime))
-  {
-    EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
-    solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, -1.*a_eps, a_incOverlapData);
-
-
-    Real fixedDt = 0.;
-    ParmParse pp;
-    pp.query("fixed_dt", fixedDt);
-    if (fixedDt > 1.e-12)
-    {
-      solver.useFixedDt(fixedDt);
     }
 
-    int maxStep = 1000000;
-    solver.run(a_integrationTime, maxStep);
+    if (m_doFirstOrderFreDeriv) // make a_y = a_yStar - f(Ubar)
+    {
+      Epetra_Vector baseflowVec(a_x);
+      getBaseflow(baseflowVec, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_incOverlapData); 
+      a_y.Update(-1., baseflowVec, 1.);
+    }
+    else // make a_y = a_yStar - (f(Ubar - eps*Uprime))
+    {
+      EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+      solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, -1.*a_eps, a_incOverlapData);
 
-    const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
-    const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
 
-    int nVeloComp = veloSoln[0]->nComp();
-    int nPresComp = presSoln[0]->nComp();
-    int totComp = this->nComp();
+      Real fixedDt = 0.;
+      ParmParse pp;
+      pp.query("fixed_dt", fixedDt);
+      if (fixedDt > 1.e-12)
+      {
+        solver.useFixedDt(fixedDt);
+      }
+
+      int maxStep = 1000000;
+      solver.run(a_integrationTime, maxStep);
+
+      const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+
+      int nVeloComp = veloSoln[0]->nComp();
+      int nPresComp = presSoln[0]->nComp();
+      int totComp = this->nComp();
 //    CH_assert(totComp == nVeloComp + nPresComp);
 
-    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 1., -1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 1., -1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
 //    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 1., -1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
 
-  }
+    }
 
-  double factor = (a_eps < 1.e-12) ? 1. : a_eps;
-  double scale = m_doFirstOrderFreDeriv ? 1./factor : 0.5/factor;
+    double factor = (a_eps < 1.e-12) ? 1. : a_eps;
+    double scale = m_doFirstOrderFreDeriv ? 1./factor : 0.5/factor;
 
-  int checkScale = a_y.Scale(scale);
-  CH_assert(checkScale == 0);
+    int checkScale = a_y.Scale(scale);
+    CH_assert(checkScale == 0);
+
+  } // end Frechet derivative
 
   pout() << "computed y = EMAMRINSOp*x" << endl;
   pout() << "Matrix-Vector Multiplication was computed " << s_callCounter << " times" << endl;

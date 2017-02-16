@@ -107,6 +107,9 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   bool plotSnapshots;
   pp.get("plot_snapshots", plotSnapshots);
 
+  bool linINS;
+  pp.get("do_linearized_INS", linINS);
+
   bool firstOrderFreDeriv;
   pp.get("do_first_order_fre_deriv", firstOrderFreDeriv);
 
@@ -116,7 +119,7 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
 
   RefCountedPtr<EBIBCFactory> castIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(ibcFact);
 
-  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, castIBCFact, a_coarsestDomain, viscosity, plotSnapshots, firstOrderFreDeriv));
+  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, castIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, firstOrderFreDeriv));
 
   RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
 

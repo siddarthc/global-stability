@@ -102,6 +102,7 @@ block_size = 1
 max_restarts = 3
 sort_EV = LM
 
+do_linearized_INS = false
 do_first_order_fre_deriv = false
 plot_snapshots = false
 

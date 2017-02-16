@@ -20,7 +20,8 @@ public:
                            const ProblemDomain& a_coarsestDomain,
                            Real                 a_viscosity,
                            bool                 a_plotSnapshots,
-                           bool                 a_doFirstOrderFreDeriv,
+                           bool                 a_doLinINS,
+                           bool                 a_doFirstOrderFreDeriv = false,
                            const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance())
 
   {
@@ -30,6 +31,7 @@ public:
     m_viscosity      = a_viscosity;
     m_ebisPtr        = a_ebisPtr;
     m_plotSnapshots  = a_plotSnapshots;
+    m_doLinINS       = a_doLinINS;
     m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
   }
 
@@ -47,6 +49,7 @@ public:
                                                       m_coarsestDomain,
                                                       m_viscosity,
                                                       m_plotSnapshots,
+                                                      m_doLinINS,
                                                       m_doFirstOrderFreDeriv,
                                                       m_ebisPtr);
 
@@ -60,6 +63,7 @@ private:
   ProblemDomain               m_coarsestDomain;
   Real                        m_viscosity;
   bool                        m_plotSnapshots;
+  bool                        m_doLinINS;
   bool                        m_doFirstOrderFreDeriv;
   const EBIndexSpace*         m_ebisPtr;
 

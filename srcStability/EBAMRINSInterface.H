@@ -23,7 +23,8 @@ public:
                     const ProblemDomain& a_coarsestDomain,
                     Real                 a_viscosity,
                     bool                 a_plotSnapshots,
-                    bool                 a_doFirstOrderFreDeriv,
+                    bool                 a_doLinINS,
+                    bool                 a_doFirstOrderFreDeriv = false,
                     const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance());
 
   virtual ~EBAMRINSInterface()
@@ -61,6 +62,7 @@ private:
   Real m_viscosity;
   bool m_isDefined;
   bool m_plotSnapshots;
+  bool m_doLinINS;
   bool m_doFirstOrderFreDeriv;
 
   Real m_baseflowL2Norm;
