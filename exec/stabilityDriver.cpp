@@ -29,6 +29,7 @@
 #include "AMRINSUtils.H"
 #include "CH_Attach.H"
 #include "EBAMRNoSubcycle.H"
+#include "EBAMRLinINS.H"
 #include "InflowOutflowIBC.H"
 #include "InflowOutflowParams.H"
 #include "PoiseuilleInflowBCValue.H"
@@ -110,16 +111,46 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   bool linINS;
   pp.get("do_linearized_INS", linINS);
 
+  bool doAdjoint;
+  pp.get("do_adjoint", doAdjoint);
+
   bool firstOrderFreDeriv;
   pp.get("do_first_order_fre_deriv", firstOrderFreDeriv);
 
 //  InflowOutflowIBCFactory ibc(flowDir, inflowVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo);
 
+// begin Baseflow IBC:
+
   RefCountedPtr<InflowOutflowIBCFactory> ibcFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo));
 
-  RefCountedPtr<EBIBCFactory> castIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(ibcFact);
+  RefCountedPtr<EBIBCFactory> baseflowIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(ibcFact);
 
-  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, castIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, firstOrderFreDeriv));
+// end Baseflow IBC
+
+// begin solver IBC for Linearized solver (either direct or adjoint):
+
+  RefCountedPtr<EBIBCFactory> solverIBCFact;
+
+  if (linINS)
+  {
+    if (!doAdjoint)  // direct modes solve
+    {
+      // hardwiring the perturbation velocity at inflow boundaries to 0
+      //      This is always true
+      Real inflowPertVel = 0.;
+      RefCountedPtr<InflowOutflowIBCFactory> solIBCFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowPertVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo));
+
+      solverIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(solIBCFact);
+    }
+    else
+    {
+      MayDay::Error("Adjoint Solver not setup");
+    }
+  }
+
+// end solver IBC 
+
+  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, firstOrderFreDeriv));
 
   RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
 

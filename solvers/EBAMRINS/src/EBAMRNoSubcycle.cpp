@@ -2029,7 +2029,6 @@ defineIrregularData()
 
           for (int idir = 0; idir < SpaceDim; idir++)
             {
-
               IntVectSet irregIVSPlus, irregIVSMinu;
               //get the covered sets and faces
               EBArith::computeCoveredFaces((*m_coveredFaceLitHi[ilev])[dit()][idir],

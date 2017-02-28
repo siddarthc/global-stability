@@ -36,7 +36,8 @@ public:
   }
   
   EBAMRLinINS(const AMRParameters&      a_params,
-              const EBIBCFactory&       a_IBC,
+              const EBIBCFactory&       a_baseflowIBC,
+              const EBIBCFactory&       a_solverIBC,
               const ProblemDomain&      a_coarsestDomain,
               Real                      a_viscosity,
               bool                      a_doAdjoint,
@@ -44,13 +45,36 @@ public:
 
   virtual ~EBAMRLinINS();
 
+  //fixes timestep to input
+  void useFixedDt(Real a_dt);
+
+  void setupForStabilityRun(const Epetra_Vector&             a_x, 
+                            const Vector<DisjointBoxLayout>& a_baseflowDBL, 
+                            const Vector<EBLevelGrid>&       a_baseflowEBLG, 
+                            const std::string&               a_baseflowFile, 
+                            double                           a_pertScale, 
+                            bool                             a_incOverlapData, 
+                            bool                             a_setupForPlottingData = false);
+
 protected:
 
   void allocateDataHolders();
 
+  virtual void defineEBISLs();
+  virtual void defineNewVel(const int a_startLevel = -1);
+  virtual void definePressure(const int a_startLevel = -1);
+  virtual void defineProjections();
+
+  void averageDown(Vector<LevelData<EBCellFAB>* >&  a_data);
+  void averageDown(Vector<LevelData<EBFluxFAB>* >&  a_data);
+  void setCoveredStuffToZero(LevelData<EBCellFAB>& a_vort);
+
+  void postInitialize();
+
     //parmaters
   AMRParameters          m_params;
-  EBIBC*                 m_ibc;
+  EBIBC*                 m_baseflowIBC;
+  EBIBC*                 m_solverIBC;
   const EBIndexSpace*    m_ebisPtr;
 
   //grid description
@@ -90,6 +114,8 @@ protected:
   //if viscosity == 0 this turns off viscous solvers, etc
   bool m_viscousCalc;
 
+  bool m_doRestart;
+
   bool m_advanceGphiOnly;
   bool m_steadyState;
   bool m_stopAdvance;
@@ -102,6 +128,12 @@ protected:
   Vector<RefCountedPtr<EBLevelAdvect>  > m_ebLevAd;
   Vector<RefCountedPtr<EBFastFR     >  > m_fluxReg;
 
+  //baseflow data
+  Vector<LevelData<EBCellFAB>* > m_baseVelo;
+  Vector<LevelData<EBFluxFAB>* > m_baseAdvVelo; // baseflow advective velocity
+  Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >  m_coveredBaseAdvVelLo;
+  Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >  m_coveredBaseAdvVelHi;
+  
   //The following is the ugly part of this stuff.
   //Covered data (advection velocities, etc) are defined with this stuff.
   //These are used to define covered data and to iterate over it.
@@ -111,6 +143,9 @@ protected:
   Vector< LayoutData< Vector< Vector<VolIndex> > >* >  m_coveredFaceLitHi;
   Vector< LayoutData< Vector< IntVectSet > >* >        m_coveredSetsLitLo;
   Vector< LayoutData< Vector< IntVectSet > >* >        m_coveredSetsLitHi;
+
+  //defines the above stuff
+  void defineIrregularData();
 
 private:
 

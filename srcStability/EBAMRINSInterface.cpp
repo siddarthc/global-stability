@@ -17,7 +17,8 @@ int EBAMRINSInterface::s_callCounter = -1;
 /*********/
 EBAMRINSInterface::
 EBAMRINSInterface(const AMRParameters& a_params,
-                  const RefCountedPtr<EBIBCFactory>  a_IBC,
+                  const RefCountedPtr<EBIBCFactory>& a_baseflowIBC,
+                  const RefCountedPtr<EBIBCFactory>& a_solverIBC,
                   const ProblemDomain& a_coarsestDomain,
                   Real                 a_viscosity,
                   bool                 a_plotSnapshots,
@@ -27,7 +28,8 @@ EBAMRINSInterface(const AMRParameters& a_params,
 {
   m_isDefined = true;
   m_params = a_params;
-  m_ibcFact = a_IBC;
+  m_baseflowIBCFact = a_baseflowIBC;
+  m_solverIBCFact = a_solverIBC;
   m_coarsestDomain = a_coarsestDomain;
   m_viscosity = a_viscosity;
   m_ebisPtr = a_ebisPtr;
@@ -149,7 +151,7 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
       // compute Frechet Derivative 
   
       // make a_yStar = (f(Ubar + eps*Uprime))
-      EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+      EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
       solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
 
       Real fixedDt = 0.;
@@ -187,7 +189,7 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     }
     else // make a_y = a_yStar - (f(Ubar - eps*Uprime))
     {
-      EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+      EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
       solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, -1.*a_eps, a_incOverlapData);
 
 
@@ -244,7 +246,7 @@ void EBAMRINSInterface::
 plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_plotName, bool a_incOverlapData) const
 {
   pout() << "plotting EigenEvector" << endl;
-  EBAMRNoSubcycle solver(m_params, *m_ibcFact, m_coarsestDomain, m_viscosity);
+  EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
 
   std::string baseflowFile = "dummyFile";
 

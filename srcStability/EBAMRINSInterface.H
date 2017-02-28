@@ -19,7 +19,8 @@ public:
   //   if false, it only writes fines level's data in the overlap region
   // a_doFirstOrderDeriv is a flag for order of Frechet Derivative
   EBAMRINSInterface(const AMRParameters& a_params,
-                    const RefCountedPtr<EBIBCFactory>  a_IBC,
+                    const RefCountedPtr<EBIBCFactory>& a_baseflowIBC,
+                    const RefCountedPtr<EBIBCFactory>& a_solverIBC, 
                     const ProblemDomain& a_coarsestDomain,
                     Real                 a_viscosity,
                     bool                 a_plotSnapshots,
@@ -58,7 +59,8 @@ public:
 private:
 
   AMRParameters m_params;
-  RefCountedPtr<EBIBCFactory>  m_ibcFact;
+  RefCountedPtr<EBIBCFactory> m_baseflowIBCFact;
+  RefCountedPtr<EBIBCFactory> m_solverIBCFact;
   Real m_viscosity;
   bool m_isDefined;
   bool m_plotSnapshots;

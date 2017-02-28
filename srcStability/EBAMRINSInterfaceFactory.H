@@ -16,7 +16,8 @@ class EBAMRINSInterfaceFactory : public ChomboSolverInterfaceFactory
 public:
 
   EBAMRINSInterfaceFactory(const AMRParameters& a_params,
-                           const RefCountedPtr<EBIBCFactory>&  a_IBC,
+                           const RefCountedPtr<EBIBCFactory>& a_baseflowIBC,
+                           const RefCountedPtr<EBIBCFactory>& a_solverIBC,
                            const ProblemDomain& a_coarsestDomain,
                            Real                 a_viscosity,
                            bool                 a_plotSnapshots,
@@ -25,13 +26,14 @@ public:
                            const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance())
 
   {
-    m_params         = a_params;
-    m_ibcFact        = a_IBC;
-    m_coarsestDomain = a_coarsestDomain;
-    m_viscosity      = a_viscosity;
-    m_ebisPtr        = a_ebisPtr;
-    m_plotSnapshots  = a_plotSnapshots;
-    m_doLinINS       = a_doLinINS;
+    m_params          = a_params;
+    m_baseflowIBCFact = a_baseflowIBC;
+    m_solverIBCFact   = a_solverIBC;
+    m_coarsestDomain  = a_coarsestDomain;
+    m_viscosity       = a_viscosity;
+    m_ebisPtr         = a_ebisPtr;
+    m_plotSnapshots   = a_plotSnapshots;
+    m_doLinINS        = a_doLinINS;
     m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
   }
 
@@ -45,7 +47,8 @@ public:
   ChomboSolverInterface* create() const
   {
     EBAMRINSInterface* retval = new EBAMRINSInterface(m_params,
-                                                      m_ibcFact,
+                                                      m_baseflowIBCFact,
+                                                      m_solverIBCFact,
                                                       m_coarsestDomain,
                                                       m_viscosity,
                                                       m_plotSnapshots,
@@ -59,7 +62,8 @@ public:
 private:
 
   AMRParameters               m_params;
-  RefCountedPtr<EBIBCFactory> m_ibcFact;
+  RefCountedPtr<EBIBCFactory> m_baseflowIBCFact;
+  RefCountedPtr<EBIBCFactory> m_solverIBCFact;
   ProblemDomain               m_coarsestDomain;
   Real                        m_viscosity;
   bool                        m_plotSnapshots;
