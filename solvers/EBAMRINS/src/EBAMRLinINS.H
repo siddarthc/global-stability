@@ -56,6 +56,8 @@ public:
                             bool                             a_incOverlapData, 
                             bool                             a_setupForPlottingData = false);
 
+  void concludeStabilityRun(const std::string* a_pltName);
+
 protected:
 
   void allocateDataHolders();
@@ -70,6 +72,21 @@ protected:
   void setCoveredStuffToZero(LevelData<EBCellFAB>& a_vort);
 
   void postInitialize();
+
+    /// compute dt
+  virtual Real computeDt();
+
+  /// compute dt with initial data
+  Real computeInitialDt();
+
+  // compute vorticity on level a_level
+  void computeVorticity(LevelData<EBCellFAB>& a_vorticity, int a_level) ;
+
+#ifdef CH_USE_HDF5
+  //
+  virtual void writePlotFile(const std::string* a_pltName = NULL);
+
+#endif
 
     //parmaters
   AMRParameters          m_params;
@@ -146,6 +163,9 @@ protected:
 
   //defines the above stuff
   void defineIrregularData();
+
+  void setupBaseflowAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
+                                const Vector<LevelData<EBCellFAB>* >& a_baseGPhi);
 
 private:
 

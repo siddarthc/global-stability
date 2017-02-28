@@ -684,6 +684,354 @@ postInitialize()
 }
 /*********/
 void EBAMRLinINS::
+computeVorticity(LevelData<EBCellFAB>& a_vort, int a_level)
+{
+  if (m_params.m_verbosity > 3)
+    {
+      pout() << "EBAMRLinINS::computeVorticity" << endl;
+    }
+  CH_assert(m_isSetup);
+  EBCellFactory ebcellfact(m_ebisl[a_level]);
+  //define the data holder
+  //vorticity is a vector in 3d, scalar in 2d
+  int ncomp = 1;
+  if (SpaceDim==3)
+    {
+      ncomp = SpaceDim;
+    }
+  a_vort.define(m_grids[a_level], ncomp, IntVect::Zero, ebcellfact);
+
+  //interpolate velocity at coarse-fine interfaces
+  //need some scratch space to do quadcfi
+
+  int numLevels = m_finestLevel+1;
+  Vector<LevelData<EBCellFAB>* > cellScratch;
+  cellScratch.resize(numLevels, NULL);
+
+// Sid: this is wrong if restarting from diff max level
+/*
+  for (int ilev=0; ilev < numLevels; ilev++)
+    {
+      EBCellFactory ebcellfact(m_ebisl[ilev]);
+      cellScratch[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], 1, 3*IntVect::Unit, ebcellfact);
+    }
+*/
+
+  if (a_level > 0)
+    {
+// Sid added
+      for (int ilev=0; ilev < numLevels; ilev++)
+        {
+          EBCellFactory ebcellfact(m_ebisl[ilev]);
+          cellScratch[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], 1, 3*IntVect::Unit, ebcellfact);
+        }
+// end add
+
+      LevelData<EBCellFAB>& phiCoar = *cellScratch[a_level-1];
+      LevelData<EBCellFAB>& phiFine = *cellScratch[a_level  ];
+      for (int idir = 0; idir < SpaceDim; idir++)
+        {
+          Interval phiInterv(0, 0);
+          Interval velInterv(idir, idir);
+          m_velo[a_level-1]->copyTo(velInterv, phiCoar, phiInterv);
+          m_velo[a_level  ]->copyTo(velInterv, phiFine, phiInterv);
+          m_quadCFI[a_level]->interpolate(phiFine,
+                                          phiCoar,
+                                          phiInterv);
+
+          //on copy back, we need ghost cells, so do the data iterator loop
+          for (DataIterator dit = phiFine.dataIterator(); dit.ok(); ++dit)
+            {
+              Box region = phiFine[dit()].getRegion(); //includes ghost cells
+              (*m_velo[a_level])[dit()].copy(region, velInterv, region, phiFine[dit()], phiInterv);
+            }
+
+          EBLevelDataOps::setVal(phiFine, 0.0);
+          EBLevelDataOps::setVal(phiCoar, 0.0);
+        }
+
+    }
+  m_velo[a_level]->exchange(Interval(0, SpaceDim-1));
+
+  //clean up temp space
+  for (int ilev=0; ilev < cellScratch.size(); ilev++)
+    {
+      if (cellScratch[ilev] != NULL)
+        {
+          delete cellScratch[ilev];
+          cellScratch[ilev] = NULL;
+        }
+    }
+
+  Real dxLev = m_dx[a_level];
+  //do actual computation
+  for (DataIterator dit = m_grids[a_level].dataIterator(); dit.ok(); ++dit)
+    {
+      EBCellFAB&  vortFAB =                a_vort[dit()];
+      EBCellFAB&  veloFAB = (*m_velo[a_level])[dit()];
+      const EBGraph& ebgraph =   m_ebisl[a_level][dit()].getEBGraph();
+      vortFAB.setVal(0.);
+
+      BaseFab<Real>& regVort = vortFAB.getSingleValuedFAB();
+      BaseFab<Real>& regVelo = veloFAB.getSingleValuedFAB();
+      Box interiorBox = m_grids[a_level].get(dit());
+      interiorBox.grow(1);
+      interiorBox &= m_domain[a_level];
+      interiorBox.grow(-1);
+      int vortIndex;
+#if CH_SPACEDIM==3
+      for (int idir = 0; idir < SpaceDim; idir++)
+        {
+          vortIndex = idir;
+#else
+          vortIndex = 0;
+          int idir = 3;
+#endif
+
+          //compute on all cells as regular
+          FORT_COMPUTEVORT(CHF_FRA1(regVort, vortIndex),
+                           CHF_CONST_FRA(regVelo),
+                           CHF_BOX(interiorBox),
+                           CHF_CONST_REAL(dxLev),
+                           CHF_CONST_INT(idir));;
+
+          //do cells on domain boundary as if they were irregular
+          IntVectSet ivsIrreg(m_grids[a_level].get(dit()));
+          ivsIrreg -= interiorBox;
+          ivsIrreg |= ebgraph.getIrregCells(interiorBox);
+          int diffDirVec[2];
+          if (SpaceDim==2 || idir ==2)
+            {
+              diffDirVec[0] = 0;
+              diffDirVec[1] = 1;
+            }
+          else if (idir == 0)
+            {
+              diffDirVec[0] = 1;
+              diffDirVec[1] = 2;
+            }
+          else if (idir==1)
+            {
+              diffDirVec[0] = 2;
+              diffDirVec[1] = 0;
+            }
+          else
+            {
+              MayDay::Error("missed a case");
+            }
+
+          for (VoFIterator vofit(ivsIrreg, ebgraph); vofit.ok(); ++vofit)
+            {
+              const VolIndex vof = vofit();
+              Real vortValue = 0.0;
+
+              //taking the derivative d(udvdir)/d(xdiffdir)
+              for (int idiff = 0; idiff < 2; idiff++)
+                {
+
+                  Real signDiff = 0;
+                  int diffDir= -1;
+                  int velComp = -1;
+                  if (idiff == 0)
+                    {
+                      signDiff = 1.0;
+                      diffDir  = diffDirVec[0];
+                      velComp  = diffDirVec[1];
+                    }
+                  else if (idiff == 1)
+                    {
+                      signDiff = -1.0;
+                      diffDir  = diffDirVec[1];
+                      velComp  = diffDirVec[0];
+                    }
+                  else
+                    {
+                      MayDay::Error("missed a case");
+                    }
+
+                  Vector<FaceIndex> hiFaces =  ebgraph.getFaces(vof, diffDir, Side::Hi);
+                  Vector<FaceIndex> loFaces =  ebgraph.getFaces(vof, diffDir, Side::Lo);
+
+                  bool hasHi = (hiFaces.size() == 1) && (!hiFaces[0].isBoundary());
+                  bool hasLo = (loFaces.size() == 1) && (!loFaces[0].isBoundary());
+                  Real diffValue = 0.0;
+                  if (hasHi && hasLo)
+                    {
+                      const VolIndex& vofHi = hiFaces[0].getVoF(Side::Hi);
+                      const VolIndex& vofLo = loFaces[0].getVoF(Side::Lo);
+                      Real hiValue = veloFAB(vofHi, velComp);
+                      Real loValue = veloFAB(vofLo, velComp);
+                      diffValue =0.5*(hiValue - loValue)/dxLev;
+                    }
+                  else if (hasHi)
+                    {
+                      const VolIndex& vofHi = hiFaces[0].getVoF(Side::Hi);
+                      Real hiValue = veloFAB(vofHi, velComp);
+                      Real loValue = veloFAB(vof,   velComp);
+                      diffValue =(hiValue - loValue)/dxLev;
+                    }
+                  else if (hasLo)
+                    {
+                      const VolIndex& vofLo = loFaces[0].getVoF(Side::Lo);
+                      Real hiValue = veloFAB(vof  , velComp);
+                      Real loValue = veloFAB(vofLo, velComp);
+                      diffValue =  (hiValue - loValue)/dxLev;
+                    }
+                  else
+                    {
+                      diffValue = 0.0;
+                    }
+                  vortValue += signDiff*diffValue;
+                } //end loop over idiff
+
+              vortFAB(vof, vortIndex) = vortValue;
+
+            } //end loop over irregular vofs
+#if CH_SPACEDIM==3
+        } //end loop over vort components in 3d
+#endif
+
+    }
+}
+/*********/
+Real EBAMRLinINS::
+computeDt()
+{
+  if (m_params.m_verbosity > 3)
+    {
+      pout() << "EBAMRLinINS::computeDt " << endl;
+    }
+
+  Real dt;
+  if (m_useFixedDt)
+    {
+      dt = m_prescribedDt;
+    }
+  else
+    {
+      int numLevels = m_finestLevel+1;
+      Real maxVel = 0.0;
+      for (int ilev=0; ilev < numLevels; ilev++)
+        {
+          LevelData<EBCellFAB>& velNewLD = *m_velo[ilev];
+
+          for (DataIterator dit = velNewLD.dataIterator(); dit.ok(); ++dit)
+            {
+              BaseFab<Real>& velFAB = (velNewLD[dit()]).getSingleValuedFAB();
+              int iRegIrregCovered;
+              CH_START(t1);
+              const BaseFab<int>& maskFAB = m_ebisl[ilev][dit()].getEBGraph().getMask(iRegIrregCovered);
+              CH_STOP(t1);
+              if (iRegIrregCovered != -1)//not all covered
+                {
+                  if (iRegIrregCovered == 0)//has irreg
+                    {
+                      Box box = m_grids[ilev].get(dit());
+                      for (int idir = 0; idir < SpaceDim; idir++)
+                        {
+                          FORT_MAXNORMMASK(CHF_REAL(maxVel),
+                                           CHF_CONST_FRA1(velFAB,idir),
+                                           CHF_BOX(box),
+                                           CHF_CONST_FIA1(maskFAB,0));
+                        }
+                      IntVectSet ivs = m_ebisl[ilev][dit()].getMultiCells(box);
+                      for (VoFIterator vofit(ivs, m_ebisl[ilev][dit()].getEBGraph()); vofit.ok(); ++vofit)
+                        {
+                          for (int idir = 0; idir < SpaceDim; idir++)
+                            {
+                              if (Abs(velNewLD[dit()](vofit(), idir)) > maxVel)
+                              {
+                                maxVel = Abs(velNewLD[dit()](vofit(), idir));
+                              }
+                            }
+                        }
+                    }
+                  else//all reg
+                    {
+                      Box box = m_grids[ilev].get(dit());
+                      for (int idir = 0; idir < SpaceDim; idir++)
+                        {
+                          FORT_MAXNORM(CHF_REAL(maxVel),
+                                       CHF_CONST_FRA1(velFAB,idir),
+                                       CHF_BOX(box));
+                        }
+                    }
+                }
+            }
+        }
+      CH_START(t2);
+#ifdef CH_MPI
+      Real tmp = 1.;
+      int result = MPI_Allreduce(&maxVel, &tmp, 1, MPI_CH_REAL,
+                                 MPI_MAX, Chombo_MPI::comm);
+      if (result != MPI_SUCCESS)
+        {
+          MayDay::Error("communication error on norm");
+        }
+      maxVel = tmp;
+#endif
+      CH_STOP(t2);
+
+      if (maxVel > 1.0e-10)
+        {
+          dt = m_params.m_cfl*m_dx[m_finestLevel]/maxVel;
+        }
+      else
+        {
+          dt = m_params.m_maxDt;
+        }
+    } //end if no prescribed dt
+
+  //finally, enforce max dt grow factor
+  if ( (m_dt > 0.) && (m_params.m_maxDtGrow > 0) &&
+       (dt > m_params.m_maxDtGrow*m_dt) )
+    {
+      dt = m_params.m_maxDtGrow*m_dt;
+    }
+
+  return dt;
+}
+/*********/
+Real EBAMRLinINS::
+computeInitialDt()
+{
+  if (m_params.m_verbosity >= 3)
+    {
+      pout() << "EBAMRLinINS::computeInitialDt " << endl;
+    }
+  Real retval;
+  if (m_useFixedDt)
+    {
+      retval = m_prescribedDt;
+    }
+  else
+    {
+      retval =  (m_params.m_initCFL/m_params.m_cfl)*computeDt();
+    }
+  return retval;
+}
+/*********/
+void EBAMRLinINS::
+setupBaseflowAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
+                         const Vector<LevelData<EBCellFAB>* >& a_baseGPhi)
+{
+/*
+    //extrapolate velocities to faces
+  //normal velocities at edges
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      //initially fill advective velocity with average to faces of
+      //cell-centered solution
+      RealVect dxLev = m_dx[ilev]*RealVect::Unit;
+      LayoutData<IntVectSet> cfivs;
+      ccpAverageVelocityToFaces(*m_baseAdvVelo[ilev], *a_baseVelo[ilev],
+                                m_grids[ilev], m_ebisl[ilev], m_domain[ilev], dxLev,
+                                cfivs);
+    }
+*/
+}
+/*********/
+void EBAMRLinINS::
 setupForStabilityRun(const Epetra_Vector&             a_x,
                      const Vector<DisjointBoxLayout>& a_baseflowDBL,
                      const Vector<EBLevelGrid>&       a_baseflowEBLG,
@@ -727,6 +1075,17 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   EBAMRDataOps::setToZero(m_baseVelo);
   EBAMRDataOps::setToZero(m_baseAdvVelo);
 
+  // Baseflow pressure grad
+  Vector<LevelData<EBCellFAB>* > baseflowGPhi;
+  baseflowGPhi.resize(m_finestLevel+1);
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    baseflowGPhi[ilev] = new LevelData<EBCellFAB>();
+    EBCellFactory ebcellfact(m_ebisl[ilev]);
+    baseflowGPhi[ilev]->define(m_grids[ilev], SpaceDim,    IntVect::Zero, ebcellfact);
+  }
+
   // Do this only if !a_setupForPlottingData
 #ifdef CH_USE_HDF5
 
@@ -737,6 +1096,7 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
     {
       handleIn.setGroupToLevel(ilev);
       read<EBCellFAB>(handleIn, *m_baseVelo[ilev], "velo", m_grids[ilev], Interval(), false);
+      read<EBCellFAB>(handleIn, *baseflowGPhi[ilev], "gphi", m_grids[ilev], Interval(), false);
       read<EBFluxFAB>(handleIn, *m_baseAdvVelo[ilev], "advVel", m_grids[ilev], Interval(), false);
     }
 
@@ -748,6 +1108,15 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   MayDay::Error("EBAMRLinINS::setupForStabiltyRun needs HDF5 to read baseflowFile");
 
 #endif
+
+  // setup baseflowAdvVelo
+  setupBaseflowAdvVelocity(m_baseVelo, baseflowGPhi);
+
+  for (int ilev = 0; ilev <= baseflowGPhi.size(); ilev++)
+  {
+    delete baseflowGPhi[ilev];
+    baseflowGPhi[ilev] = NULL;
+  }
 
   // make U = a_pertScale*Uprime
   int nVeloComp = m_velo[0]->nComp();
@@ -774,4 +1143,138 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   m_time = 0.;
 }
 /*********/
+void EBAMRLinINS::
+concludeStabilityRun(const std::string* a_pltName)
+{
 
+#ifdef CH_USE_HDF5
+
+  writePlotFile(a_pltName);
+
+#endif
+}
+/*********/
+/*****************/
+#ifdef CH_USE_HDF5
+/*****************/
+void
+EBAMRLinINS::writePlotFile(const std::string* a_pltName)
+{
+  if (m_params.m_verbosity > 3)
+    {
+      pout() << "EBAMRLinINS::writePlotFile" << endl;
+    }
+  int curNumLevels = m_finestLevel + 1;
+
+  Vector<string> presnames(1, string("pressure"));
+#if CH_SPACEDIM == 2
+  Vector<string> vortnames(1, string("vorticity"));
+#else
+  Vector<string> vortnames(SpaceDim);
+#endif
+
+  Vector<string> velonames(SpaceDim);
+  Vector<string> gphinames(SpaceDim);
+  Vector<string> names;
+  for (int idir = 0; idir < SpaceDim; idir++)
+    {
+      char velochar[100];
+      char gphichar[100];
+      sprintf(velochar, "velocity%d", idir);
+      sprintf(gphichar, "gradPres%d", idir);
+      velonames[idir] = string(velochar);
+      gphinames[idir] = string(gphichar);
+
+#if CH_SPACEDIM==3
+      char vortchar[100];
+      sprintf(vortchar, "vorticity%d", idir);
+      vortnames[idir] = string(vortchar);
+#endif
+
+    }
+
+  names = velonames;
+  names.append(gphinames);
+  names.append(presnames);
+  names.append(vortnames);
+
+  int ncells = m_domain[0].size(0);
+
+  bool replaceCovered = false;
+  Vector<Real> coveredValues;
+
+  int nlev = m_finestLevel + 1;
+  Vector<LevelData<EBCellFAB>* > vorticity(nlev, NULL);
+  Vector<LevelData<EBCellFAB>* > outputData(nlev, NULL);
+
+  for (int ilev = 0; ilev < nlev; ilev++)
+    {
+      vorticity[ilev] = new LevelData<EBCellFAB>();
+      computeVorticity(*vorticity[ilev], ilev);
+
+#if CH_SPACEDIM==2
+      int nvar = 2*SpaceDim + 2;
+#else
+      int nvar = 3*SpaceDim + 1;
+#endif
+      EBCellFactory ebcellfact(m_ebisl[ilev]);
+      outputData[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], nvar, IntVect::Zero, ebcellfact);
+
+      Interval srcInterv, dstInterv;
+      srcInterv = Interval(0, SpaceDim-1);
+      dstInterv = Interval(0, SpaceDim-1);
+      m_velo[ilev]->copyTo(srcInterv, *outputData[ilev], dstInterv);
+
+      srcInterv = Interval(0, SpaceDim-1);
+      dstInterv = Interval(SpaceDim, 2*SpaceDim-1);
+      m_gphi[ilev]->copyTo(srcInterv, *outputData[ilev], dstInterv);
+
+      srcInterv = Interval(0, 0);
+      dstInterv = Interval(2*SpaceDim, 2*SpaceDim);
+      m_pres[ilev]->copyTo(srcInterv, *outputData[ilev], dstInterv);
+
+#if CH_SPACEDIM==2
+      srcInterv = Interval(0, 0);
+      dstInterv = Interval(2*SpaceDim+1, 2*SpaceDim+1);
+      vorticity[ilev]->copyTo(srcInterv, *outputData[ilev], dstInterv);
+
+#else
+      srcInterv = Interval(0, SpaceDim-1);
+      dstInterv = Interval(2*SpaceDim+1, 3*SpaceDim);
+      vorticity[ilev]->copyTo(srcInterv, *outputData[ilev], dstInterv);
+#endif
+      setCoveredStuffToZero(*outputData[ilev]);
+    }
+
+  string filename;
+  if (a_pltName  == NULL)
+  {
+    filename = "plot.nx"+SSTR(ncells)+".step."+SSTR(m_curStep)+"."+SSTR(SpaceDim)+"d.hdf5";
+  }
+  else
+  {
+    filename = *a_pltName;
+  }
+
+  writeEBHDF5(filename,
+              m_grids,
+              outputData,
+              names,
+              m_domain[0].domainBox(),
+              m_dx[0],
+              m_dt,
+              m_time,
+              m_params.m_refRatio,
+              curNumLevels,
+              replaceCovered,
+              coveredValues);
+
+  for (int ilev = 0; ilev <nlev; ilev++)
+    {
+      delete vorticity[ilev];
+      delete outputData[ilev];
+    }
+}
+/*****************/
+#endif //CH_USE_HDF5
+/*****************/
