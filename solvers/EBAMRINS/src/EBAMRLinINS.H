@@ -82,6 +82,14 @@ protected:
   // compute vorticity on level a_level
   void computeVorticity(LevelData<EBCellFAB>& a_vorticity, int a_level) ;
 
+  void
+  extrapolateToCoveredFaces(Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredMacLo,
+                            Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredMacHi,
+                            const Vector<LevelData<EBFluxFAB>* >&                 a_macOpen,
+                            const Vector<LevelData<EBCellFAB>* >&                 a_cellOpen,
+                            int                                                   a_idir,
+                            Vector<RefCountedPtr<EBLevelAdvect> >              *  a_ebLevAd = NULL);
+
 #ifdef CH_USE_HDF5
   //
   virtual void writePlotFile(const std::string* a_pltName = NULL);
@@ -164,8 +172,8 @@ protected:
   //defines the above stuff
   void defineIrregularData();
 
-  void setupBaseflowAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
-                                const Vector<LevelData<EBCellFAB>* >& a_baseGPhi);
+  void setupCoveredBaseAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
+                                   const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo);
 
 private:
 

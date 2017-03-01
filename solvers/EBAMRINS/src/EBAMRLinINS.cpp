@@ -1012,23 +1012,58 @@ computeInitialDt()
 }
 /*********/
 void EBAMRLinINS::
-setupBaseflowAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
-                         const Vector<LevelData<EBCellFAB>* >& a_baseGPhi)
+extrapolateToCoveredFaces(Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredMacLo,
+                          Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredMacHi,
+                          const Vector<LevelData<EBFluxFAB>* >&                 a_macOpen,
+                          const Vector<LevelData<EBCellFAB>* >&                 a_cellOpen,
+                          int                                                   a_idir,
+                          Vector<RefCountedPtr<EBLevelAdvect> >              *  a_ebLevAd)
 {
-/*
-    //extrapolate velocities to faces
-  //normal velocities at edges
+  if (a_ebLevAd == NULL)
+  {
+    a_ebLevAd = &m_ebLevAd;
+  }
+  // averageDown(a_macOpen);
+  //extrapolate the projected velocity to covered faces
   for (int ilev = 0; ilev <= m_finestLevel; ilev++)
     {
-      //initially fill advective velocity with average to faces of
-      //cell-centered solution
-      RealVect dxLev = m_dx[ilev]*RealVect::Unit;
-      LayoutData<IntVectSet> cfivs;
-      ccpAverageVelocityToFaces(*m_baseAdvVelo[ilev], *a_baseVelo[ilev],
-                                m_grids[ilev], m_ebisl[ilev], m_domain[ilev], dxLev,
-                                cfivs);
+      ProblemDomain curDomain(m_domain[ilev]);
+
+      LevelData<EBFluxFAB>& faceValue = (LevelData<EBFluxFAB>&) *a_macOpen[ilev];
+      faceValue.exchange(Interval(0,0));
+
+      for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+        {
+
+          EBPatchAdvect& patcher  = (*a_ebLevAd)[ilev]->getPatchAdvect(dit());
+          patcher.extrapToCoveredFaces(*(*a_coveredMacLo[ilev])[dit()][a_idir],
+                                       (*a_macOpen[ilev])[dit()][a_idir],
+                                       (*a_cellOpen[ilev])[dit()],
+                                       (*m_coveredFaceLitLo[ilev])[dit()][a_idir],
+                                       a_idir, Side::Lo, m_grids[ilev].get(dit()));
+
+          patcher.extrapToCoveredFaces(*(*a_coveredMacHi[ilev])[dit()][a_idir],
+                                       (*a_macOpen[ilev])[dit()][a_idir],
+                                       (*a_cellOpen[ilev])[dit()],
+                                       (*m_coveredFaceLitHi[ilev])[dit()][a_idir],
+                                       a_idir, Side::Hi, m_grids[ilev].get(dit()));
+        }
     }
-*/
+}
+/*********/
+void EBAMRLinINS::
+setupCoveredBaseAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
+                            const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo)
+{
+  // just doing extrapolation to covered faces
+  //    because the effect of source terms on extrap is hidden in a_adVelo
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    extrapolateToCoveredFaces(m_coveredBaseAdvVelLo,
+                              m_coveredBaseAdvVelHi,
+                              a_baseAdvVelo,
+                              a_baseVelo, idir);
+  }
 }
 /*********/
 void EBAMRLinINS::
@@ -1075,6 +1110,7 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   EBAMRDataOps::setToZero(m_baseVelo);
   EBAMRDataOps::setToZero(m_baseAdvVelo);
 
+/*
   // Baseflow pressure grad
   Vector<LevelData<EBCellFAB>* > baseflowGPhi;
   baseflowGPhi.resize(m_finestLevel+1);
@@ -1085,7 +1121,7 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
     EBCellFactory ebcellfact(m_ebisl[ilev]);
     baseflowGPhi[ilev]->define(m_grids[ilev], SpaceDim,    IntVect::Zero, ebcellfact);
   }
-
+*/
   // Do this only if !a_setupForPlottingData
 #ifdef CH_USE_HDF5
 
@@ -1096,7 +1132,7 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
     {
       handleIn.setGroupToLevel(ilev);
       read<EBCellFAB>(handleIn, *m_baseVelo[ilev], "velo", m_grids[ilev], Interval(), false);
-      read<EBCellFAB>(handleIn, *baseflowGPhi[ilev], "gphi", m_grids[ilev], Interval(), false);
+//      read<EBCellFAB>(handleIn, *baseflowGPhi[ilev], "gphi", m_grids[ilev], Interval(), false);
       read<EBFluxFAB>(handleIn, *m_baseAdvVelo[ilev], "advVel", m_grids[ilev], Interval(), false);
     }
 
@@ -1108,15 +1144,6 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   MayDay::Error("EBAMRLinINS::setupForStabiltyRun needs HDF5 to read baseflowFile");
 
 #endif
-
-  // setup baseflowAdvVelo
-  setupBaseflowAdvVelocity(m_baseVelo, baseflowGPhi);
-
-  for (int ilev = 0; ilev <= baseflowGPhi.size(); ilev++)
-  {
-    delete baseflowGPhi[ilev];
-    baseflowGPhi[ilev] = NULL;
-  }
 
   // make U = a_pertScale*Uprime
   int nVeloComp = m_velo[0]->nComp();
@@ -1137,7 +1164,20 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   }
 
   defineIrregularData();
+
+  // setup baseflowAdvVelo
+  setupCoveredBaseAdvVelocity(m_baseVelo, m_baseAdvVelo);
+
+/*
+  for (int ilev = 0; ilev <= baseflowGPhi.size(); ilev++)
+  {
+    delete baseflowGPhi[ilev];
+    baseflowGPhi[ilev] = NULL;
+  }
+*/
+
   postInitialize();
+
 //  m_doRestart = false; 
   m_doRestart = true;
   m_time = 0.;
