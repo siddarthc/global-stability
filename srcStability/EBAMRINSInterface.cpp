@@ -8,6 +8,8 @@
 #include "ParmParse.H"
 #include "EBAMRDataOps.H"
 
+#include "EBAMRLinINS.H"
+
 #define SSTR( x ) static_cast< std::ostringstream & >( \
         ( std::ostringstream() << std::dec << x ) ).str()
 
@@ -23,6 +25,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
                   Real                 a_viscosity,
                   bool                 a_plotSnapshots,
                   bool                 a_doLinINS,
+                  bool                 a_doAdjoint,
                   bool                 a_doFirstOrderFreDeriv,
                   const EBIndexSpace* const a_ebisPtr)
 {
@@ -37,6 +40,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
   m_coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
   m_plotSnapshots = a_plotSnapshots;
   m_doLinINS = a_doLinINS;
+  m_doAdjoint = a_doAdjoint;
   m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
 }
 /*********/
@@ -142,7 +146,36 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
   if (m_doLinINS)
   {
-    MayDay::Error("LinINS not setup");
+    // make a_y = f(Ubar + eps*Uprime);
+    // the solution should be independent of eps
+    EBAMRLinINS solver(m_params, *m_baseflowIBCFact, *m_solverIBCFact, m_coarsestDomain, m_viscosity, m_doAdjoint);
+
+    solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
+
+      Real fixedDt = 0.;
+      ParmParse pp;
+      pp.query("fixed_dt", fixedDt);
+      if (fixedDt > 1.e-12)
+      {
+        solver.useFixedDt(fixedDt);
+      }
+
+      int maxStep = 1000000;
+      solver.run(a_integrationTime, maxStep);
+
+      int check1 = a_y.PutScalar(0.);
+      CH_assert(check1 == 0);
+
+      const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+//      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+
+      int nVeloComp = veloSoln[0]->nComp();
+//      int nPresComp = presSoln[0]->nComp();
+      int totComp = this->nComp();
+//    CH_assert(totComp == nVeloComp + nPresComp);
+
+      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+//    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
   } 
 
   else
@@ -169,10 +202,10 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
       CH_assert(check1 == 0);
 
       const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
-      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+//      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
 
       int nVeloComp = veloSoln[0]->nComp();
-      int nPresComp = presSoln[0]->nComp();
+//      int nPresComp = presSoln[0]->nComp();
       int totComp = this->nComp();
 //    CH_assert(totComp == nVeloComp + nPresComp);
 
@@ -205,10 +238,10 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
       solver.run(a_integrationTime, maxStep);
 
       const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
-      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+//      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
 
       int nVeloComp = veloSoln[0]->nComp();
-      int nPresComp = presSoln[0]->nComp();
+//      int nPresComp = presSoln[0]->nComp();
       int totComp = this->nComp();
 //    CH_assert(totComp == nVeloComp + nPresComp);
 
@@ -246,13 +279,27 @@ void EBAMRINSInterface::
 plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_plotName, bool a_incOverlapData) const
 {
   pout() << "plotting EigenEvector" << endl;
-  EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
 
-  std::string baseflowFile = "dummyFile";
+  if (!m_doLinINS)
+  {
+    EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
 
-  solver.setupForStabilityRun(a_v, a_baseflowDBL, a_baseflowEBLG, baseflowFile, 1.0, a_incOverlapData, true);
-//  solver.run(0,0);
-  solver.concludeStabilityRun(&a_plotName);
+    std::string baseflowFile = "dummyFile";
+
+    solver.setupForStabilityRun(a_v, a_baseflowDBL, a_baseflowEBLG, baseflowFile, 1.0, a_incOverlapData, true);
+//    solver.run(0,0);
+    solver.concludeStabilityRun(&a_plotName);
+  }
+  else
+  {
+    EBAMRLinINS solver(m_params, *m_baseflowIBCFact, *m_solverIBCFact, m_coarsestDomain, m_viscosity, m_doAdjoint);
+
+    std::string baseflowFile = "dummyFile";
+
+    solver.setupForStabilityRun(a_v, a_baseflowDBL, a_baseflowEBLG, baseflowFile, 1.0, a_incOverlapData, true);
+//    solver.run(0,0);
+    solver.concludeStabilityRun(&a_plotName);
+  }
 }
 /*********/
 /*********/

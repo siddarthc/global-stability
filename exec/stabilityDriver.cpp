@@ -150,7 +150,7 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
 
 // end solver IBC 
 
-  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, firstOrderFreDeriv));
+  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, doAdjoint, firstOrderFreDeriv));
 
   RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
 

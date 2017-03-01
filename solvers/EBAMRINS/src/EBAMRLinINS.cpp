@@ -70,6 +70,8 @@ EBAMRLinINS(const AMRParameters&      a_params,
   m_baseflowIBC    = a_baseflowIBCFact.create();
   m_solverIBC      = a_solverIBCFact.create(); 
 
+  m_doAdjoint = a_doAdjoint;
+
   //resize vectors and set them where we can
   Real coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
   int nlevels = m_params.m_maxLevel + 1;
@@ -1051,6 +1053,12 @@ extrapolateToCoveredFaces(Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  
     }
 }
 /*********/
+Real EBAMRLinINS::
+run(Real a_maxTime, int a_maxStep)
+{
+
+}
+/*********/
 void EBAMRLinINS::
 setupCoveredBaseAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
                             const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo)
@@ -1165,8 +1173,11 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
 
   defineIrregularData();
 
-  // setup baseflowAdvVelo
-  setupCoveredBaseAdvVelocity(m_baseVelo, m_baseAdvVelo);
+  if (!a_setupForPlottingData)
+  {
+    // setup baseflowAdvVelo if not setting up for plotting
+    setupCoveredBaseAdvVelocity(m_baseVelo, m_baseAdvVelo);
+  }
 
 /*
   for (int ilev = 0; ilev <= baseflowGPhi.size(); ilev++)

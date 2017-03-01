@@ -56,6 +56,19 @@ public:
                             bool                             a_incOverlapData, 
                             bool                             a_setupForPlottingData = false);
 
+  /// advance solution.  returns time of final solution
+  Real run(Real a_maxTime, int a_maxStep);
+
+  Vector<LevelData<EBCellFAB>* >& getVeloNew()
+  {
+    return m_velo;
+  }
+
+  Vector<LevelData<EBCellFAB>* >& getPresNew()
+  {
+    return m_pres;
+  }
+
   void concludeStabilityRun(const std::string* a_pltName);
 
 protected:
@@ -144,6 +157,8 @@ protected:
   bool m_advanceGphiOnly;
   bool m_steadyState;
   bool m_stopAdvance;
+
+  bool m_doAdjoint; 
 
   //data held in memory
   Vector<LevelData<EBCellFAB>* > m_velo;
