@@ -55,6 +55,14 @@ protected:
 //  void predictor();
 //  void corrector();
 
+  virtual void transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >& a_uGradS,
+                                           Vector<LevelData<EBCellFAB>* >& a_scalOld,
+                                           bool                            a_reallyVelocity);
+
+  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const int& a_dir);
+
+  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source);
+
   void conclude();
 
   bool   m_doAdjoint;

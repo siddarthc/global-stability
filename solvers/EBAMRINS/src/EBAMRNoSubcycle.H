@@ -229,7 +229,7 @@ public:
                   Real a_hang,
                   Real a_tolerance);
 
-  void
+  virtual void
   normalVelocityPredictor(Vector<LevelData<EBFluxFAB> *>&                       a_advVel,
                           Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredAdvVelLo,
                           Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredAdvVelHi,
@@ -453,9 +453,9 @@ protected:
   {
   }
 
-  void transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >& a_uGradS,
-                                   Vector<LevelData<EBCellFAB>* >& a_scalOld,
-                                   bool                            a_reallyVelocity);
+  virtual void transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >& a_uGradS,
+                                           Vector<LevelData<EBCellFAB>* >& a_scalOld,
+                                           bool                            a_reallyVelocity);
 
 
   /// things to do after a timestep

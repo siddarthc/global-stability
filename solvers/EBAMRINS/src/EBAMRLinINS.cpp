@@ -7,6 +7,7 @@
 
 #include "EBAMRLinINS.H"
 #include "EBAMRDataOps.H"
+#include "DirichletPoissonEBBC.H"
 
 /*********/
 EBAMRLinINS::
@@ -276,3 +277,228 @@ conclude()
 
 }
 /*********/
+void EBAMRLinINS::
+computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const int& a_dir)
+{
+
+}
+/*********/
+void EBAMRLinINS::
+computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source)
+{
+
+}
+/*********/
+void EBAMRLinINS::
+transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
+                            Vector<LevelData<EBCellFAB>* >&    a_scalOld,
+                            bool                               a_reallyVelocity)
+{
+  int ncomp = a_uDotDelU[0]->nComp();
+  int nlevels = m_finestLevel+1;
+
+  //make temporaries with right number of variables
+  Vector<LevelData<EBFluxFAB>* >                       macScratchVec(nlevels, NULL);
+  Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >  coveredScratchVecLo(nlevels, NULL);
+  Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >  coveredScratchVecHi(nlevels, NULL);
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      EBFluxFactory ebfluxfact(m_ebisl[ilev]);
+      macScratchVec[ilev]       = new LevelData<EBFluxFAB>(m_grids[ilev], ncomp, 3*IntVect::Unit, ebfluxfact);
+
+      coveredScratchVecLo[ilev] = new LayoutData<Vector<BaseIVFAB<Real> * > >(m_grids[ilev]);
+      coveredScratchVecHi[ilev] = new LayoutData<Vector<BaseIVFAB<Real> * > >(m_grids[ilev]);
+      for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+        {
+
+          (*coveredScratchVecLo[ilev])[dit()].resize(SpaceDim, NULL);
+          (*coveredScratchVecHi[ilev])[dit()].resize(SpaceDim, NULL);
+
+          const EBGraph& ebgraph = m_ebisl[ilev][dit()].getEBGraph();
+          for (int idir = 0; idir < SpaceDim; idir++)
+            {
+              (*coveredScratchVecLo[ilev])[dit()][idir] = new BaseIVFAB<Real>((*m_coveredSetsLitLo[ilev])[dit()][idir], ebgraph, ncomp);
+              (*coveredScratchVecHi[ilev])[dit()][idir] = new BaseIVFAB<Real>((*m_coveredSetsLitHi[ilev])[dit()][idir], ebgraph, ncomp);
+            }
+        }
+    }
+  for (int icomp = 0; icomp < ncomp; icomp++)
+    {
+      EBPatchGodunov::setCurComp(icomp);
+      EBPatchGodunov::setDoingAdvVel(0);
+
+      RefCountedPtr<EBPhysIBCFactory> advectBC;
+      if (a_reallyVelocity)
+        {
+          advectBC  = m_ibc->getVelAdvectBC(icomp);
+          EBPatchGodunov::setDoingVel(1);
+        }
+      else
+        {
+          advectBC  = m_ibc->getScalarAdvectBC(icomp);
+          EBPatchGodunov::setDoingVel(0);
+        }
+
+      for (int ilev=0; ilev <= m_finestLevel; ilev++)
+        {
+          Interval srcInterv(icomp, icomp);
+          Interval dstInterv(0, 0);
+          a_scalOld[ilev]->copyTo(srcInterv, *m_cellScratch[ilev], dstInterv);
+        }
+
+      //fill in viscous source term where necessary
+      Vector<LevelData<EBCellFAB>* > * source = NULL;
+      if (a_reallyVelocity && m_viscousCalc)
+        {
+          //cellscratch already holds velocity component
+
+          DirichletPoissonEBBC::s_velComp = icomp;
+          viscousSourceForAdvect(m_cellScratc2,   //returns holding source term = nu*lapl
+                                 m_cellScratch,   //holds cell centered vel comp n
+                                 m_cellScratc1,   //will hold the zero for the residual calc (zeroed inside routine)
+                                 icomp,           //velocity component
+                                 m_time);         //time, for BC setting
+          source = &m_cellScratc2;
+        }
+
+      Vector<LevelData<EBCellFAB>*> extraSource;
+      extraSource.resize(m_finestLevel+1, NULL);
+      for (int ilev=0; ilev <= m_finestLevel; ilev++)
+        {
+          EBCellFactory ebcellfact(m_ebisl[ilev]);
+          extraSource[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], 1, 3*IntVect::Unit, ebcellfact);
+        }
+      EBAMRDataOps::setToZero(extraSource);
+
+      computeExtraSourceForPredictor(extraSource, icomp);
+
+      if (source != NULL)
+        {
+          for (int ilev=0; ilev<= m_finestLevel; ilev++)
+            {
+              for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+                {
+                  (*(*source)[ilev])[dit()] += (*extraSource[ilev])[dit()];
+                }
+            }
+        }
+      else
+        {
+          source = &extraSource;
+        }
+
+      //cellscratch used for consstate
+      extrapolateScalarCol(m_macScratch1,
+                           m_coveredScratchLo,
+                           m_coveredScratchHi,
+                           advectBC,
+                           m_advVel,
+                           source,
+                           m_cellScratch,
+                           m_velo);
+
+      for (int ilev=0; ilev<= m_finestLevel; ilev++)
+        {
+          delete extraSource[ilev];
+        }
+
+      if (a_reallyVelocity)
+        {
+          //correct with previously stored pressure gradient
+          Real time = m_time + 0.5*m_dt;
+          m_macProjector->setTime(time);
+          m_macProjector->correctVelocityComponent(m_macScratch1, m_macGradient, icomp);
+          for (int idir = 0; idir < SpaceDim; idir++)
+            {
+              int faceDir = idir;
+              int velComp = icomp;
+              //correct covered velocity with extrapolation of pressure gradient
+              m_macProjector->correctVelocityComponent(m_coveredScratchLo,
+                                                       m_coveredScratchHi,
+                                                       m_coveredFaceLitLo,
+                                                       m_coveredFaceLitHi,
+                                                       m_coveredSetsLitLo,
+                                                       m_coveredSetsLitHi,
+                                                       m_macGradient, faceDir, velComp);
+            }
+
+          //overwrite extrapolated with advective velocity if appropriate
+          //(the normal velocity here had the wrong boundary conditions)
+          for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+            {
+              for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+                {
+                  Box box = grow(m_grids[ilev].get(dit()), 1);
+                  Interval interv(0,0);
+                  //copy over covered advective velocity
+                  (*m_coveredScratchLo[ilev])[dit()][icomp]->copy(box, interv, box, *(*m_coveredAdvVelLo[ilev])[dit()][icomp], interv);
+                  (*m_coveredScratchHi[ilev])[dit()][icomp]->copy(box, interv, box, *(*m_coveredAdvVelHi[ilev])[dit()][icomp], interv);
+
+                  EBFluxFAB& macExtrapFAB    = (*m_macScratch1[ilev])[dit()];
+                  const EBFluxFAB& advVelFAB = (*m_advVel[ilev])[dit()];
+                  //icomp is the the component of the velocity and
+                  //therefore also the face for which it is the normal component
+                  macExtrapFAB[icomp].copy(advVelFAB[icomp]);
+                }
+            }
+        }
+
+      //copy extrapolated values into vector holders
+      for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+        {
+          Interval srcInterv(0, 0);
+          Interval dstInterv(icomp, icomp);
+          m_macScratch1[ilev]->copyTo(srcInterv, *macScratchVec[ilev],  dstInterv);
+          int ibox = 0;
+          for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+            {
+              Box box = grow(m_grids[ilev].get(dit()), 1);
+              box &= m_domain[ilev];
+              for (int idir = 0; idir < SpaceDim; idir++)
+                {
+                  (*coveredScratchVecLo[ilev])[dit()][idir]->copy(box, dstInterv, box, *(*m_coveredScratchLo[ilev])[dit()][idir], srcInterv);
+                  (*coveredScratchVecHi[ilev])[dit()][idir]->copy(box, dstInterv, box, *(*m_coveredScratchHi[ilev])[dit()][idir], srcInterv);
+                }
+
+              ibox++;
+            }
+        }
+
+      //May need predicted velocity for EBAMRNoSubcycle extensions
+      storePredictedVelocity(m_macScratch1,
+                             m_coveredScratchLo,
+                             m_coveredScratchHi,
+                             icomp);
+
+    } //end loop over velocity components  (icomp)
+
+  //average down face centered stuff so that it makes sense at coarse-fine interfaces
+  averageDown(macScratchVec);
+
+  //compute the actual advective derivative
+  //split this out to make it separately testable
+  if (m_params.m_verbosity > 3)
+    {
+      pout() << "EBAMRLinINS::computing advective derivative" << endl;
+    }
+
+  computeAdvectiveDerivative(a_uDotDelU, m_baseAdvVelo, macScratchVec,
+                             m_coveredBaseAdvVelLo, m_coveredBaseAdvVelHi,
+                             coveredScratchVecLo, coveredScratchVecHi);
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      delete macScratchVec[ilev];
+      for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+        {
+          for (int idir = 0; idir < SpaceDim; idir++)
+            {
+              delete (*coveredScratchVecLo[ilev])[dit()][idir];
+              delete (*coveredScratchVecHi[ilev])[dit()][idir];
+            }
+        }
+      delete coveredScratchVecLo[ilev];
+      delete coveredScratchVecHi[ilev];
+    }
+}
