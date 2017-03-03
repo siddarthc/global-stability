@@ -362,7 +362,7 @@ protected:
 
 
   /// write final checkpoint and plot files
-  void conclude();
+  virtual void conclude();
 
   /// accumulate number of points updated
   void pointsUpdated();
@@ -580,8 +580,8 @@ protected:
   void
   extrapolateToCoveredFaces(Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredMacLo,
                             Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >&  a_coveredMacHi,
-                            Vector<LevelData<EBFluxFAB>* >&                       a_macOpen,
-                            Vector<LevelData<EBCellFAB>* >&                       a_cellOpen,
+                            const Vector<LevelData<EBFluxFAB>* >&                       a_macOpen,
+                            const Vector<LevelData<EBCellFAB>* >&                       a_cellOpen,
                             int                                                   a_idir,
                             Vector<RefCountedPtr<EBLevelAdvect> >              *  a_ebLevAd = NULL);
 
