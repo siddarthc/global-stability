@@ -63,6 +63,8 @@ protected:
                                            Vector<LevelData<EBCellFAB>* >& a_scalOld,
                                            bool                            a_reallyVelocity);
 
+  virtual void correctVelocity();
+
   virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir);
 
   virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo);

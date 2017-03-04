@@ -672,3 +672,218 @@ transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
       delete coveredScratchVecHi[ilev];
     }
 }
+/*********/
+void EBAMRLinINS::
+correctVelocity()
+{
+  if (m_params.m_verbosity > 3)
+    {
+      pout() << "EBAMRLinINS::correctVelocity" << endl;
+    }
+
+  Interval interv(0, SpaceDim-1);
+  Vector<LevelData<EBCellFAB>* > tempLDPtr;
+  tempLDPtr.resize(m_finestLevel+1);
+  for (int ilev=0; ilev<= m_finestLevel; ilev++)
+    {
+      EBCellFactory ebcellfact(m_ebisl[ilev]);
+      tempLDPtr[ilev] = new LevelData<EBCellFAB>();
+      tempLDPtr[ilev]->define(m_grids[ilev], SpaceDim,  3*IntVect::Unit, ebcellfact);
+      m_velo[ilev]->copyTo(interv, *(tempLDPtr[ilev]), interv);
+    }
+
+  Vector<LevelData<EBCellFAB>*> extraSource;
+  Vector<LevelData<EBCellFAB>*> UStar;
+  extraSource.resize(m_finestLevel+1, NULL);
+  UStar.resize(m_finestLevel+1, NULL);
+  for (int ilev=0; ilev <= m_finestLevel; ilev++)
+    {
+      EBCellFactory ebcellfact(m_ebisl[ilev]);
+      extraSource[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim, 3*IntVect::Unit, ebcellfact);
+      UStar[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim, 3*IntVect::Unit, ebcellfact);
+    }
+  EBAMRDataOps::setToZero(extraSource);
+  EBAMRDataOps::setToZero(UStar);
+
+  // U* = U^n - dt*U.delu
+  EBAMRDataOps::axby(UStar, m_velo, m_uDotDelU, 1., -1.*m_dt);
+  computeExtraSourceForCorrector(extraSource, UStar);
+
+  for (int ilev=0; ilev<= m_finestLevel; ilev++)
+    {
+      delete UStar[ilev];
+    }
+
+    if (!m_viscousCalc)
+    {
+      //for inviscid calc, do not add pressure gradient into
+      //the update so we don't have to iterate for the pressure gradient after regrid.
+      //If you use the pressure grad in the update and do not iterate after regrid,
+      //the solution can ring.
+      for (int ilev=0; ilev<= m_finestLevel; ilev++)
+        {
+          for (DataIterator dit = m_grids[ilev].dataIterator(); dit.ok(); ++dit)
+            {
+              EBCellFAB& newVel = (*m_velo[ilev])[dit()];
+              EBCellFAB& uDotDelU = (*m_uDotDelU[ ilev])[dit()];
+              EBCellFAB& gradPres = (*m_gphi [ ilev])[dit()];
+              EBCellFAB& source = (*extraSource[ ilev])[dit()];
+              //make udotdelu = udotdelu + gradp
+              uDotDelU += gradPres;
+
+              //make udotdelu = -udotdelu - gradp
+              uDotDelU *= -1.0;
+
+              //adding extra source
+              uDotDelU += source;
+
+              //now udotdelu = dt*(-udotdelu - gradp);
+              uDotDelU *=  m_dt;
+
+              //put change of velocity into newvel
+              newVel += uDotDelU;
+            }
+        }
+    }
+  else
+    {
+      //add gradient of pressure into udotdelu
+      EBAMRDataOps::incr(m_uDotDelU, m_gphi, 1.0);
+      //make udelu = -udelu-gradp == the source term of heat eqn
+      EBAMRDataOps::scale(m_uDotDelU, -1.0);
+
+      EBAMRDataOps::incr(m_uDotDelU, extraSource, 1.0);
+
+      if (m_params.m_verbosity >= 2)
+        {
+          pout() << "EBAMRLinINS::solving implicitly for viscous and any extra source terms" << endl;
+        }
+      for (int idir = 0; idir < SpaceDim; idir++)
+        {
+          //make cellscratch = udotdelu
+          EBAMRDataOps::setToZero(m_cellScratc2);
+          EBAMRDataOps::setToZero(m_cellScratc1);
+          EBAMRDataOps::setToZero(m_cellScratch);
+          //put component of rhs into cellscratc2
+          //put component of velo into cellscratch
+          //new velocity comes out in cellscratc1
+          Interval vecInterv(idir, idir);
+          Interval scaInterv(0, 0);
+          for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+            {
+              m_uDotDelU[ilev]->copyTo(vecInterv,  *m_cellScratc2[ilev], scaInterv);
+              m_velo[ ilev]->copyTo(vecInterv,  *m_cellScratch[ilev], scaInterv);
+              m_velo[ ilev]->copyTo(vecInterv,  *m_cellScratc1[ilev], scaInterv);
+            }
+
+          //tell EBBC which velocity component we are solving for
+          DirichletPoissonEBBC::s_velComp = idir;
+
+          //solve the stinking equation
+          int lbase = 0;
+          int lmax = m_finestLevel;
+          if (m_params.m_orderTimeIntegration == 2)
+            {
+              m_tgaSolver[idir]->oneStep(m_cellScratc1, //vel new
+                                         m_cellScratch, //vel old
+                                         m_cellScratc2, //source
+                                         m_dt,
+                                         lbase,
+                                         lmax,
+                                         m_time);
+            }
+          else if (m_params.m_orderTimeIntegration == 1)
+            {
+              m_backwardSolver[idir]->oneStep(m_cellScratc1, //vel new
+                                              m_cellScratch, //vel old
+                                              m_cellScratc2, //source
+                                              m_dt,
+                                              lbase,
+                                              lmax,
+                                              false);//do not zero phi
+            }
+          else
+            {
+              MayDay::Error("EBAMRLinINS::correctVelocity -- bad order time integration");
+            }
+
+          //now copy the answer back from scratch into velo
+          for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+            {
+              m_cellScratc1[ilev]->copyTo(scaInterv, *m_velo[ilev],  vecInterv);
+            }
+        }
+    }
+
+  if (m_params.m_verbosity >= 2)
+    {
+      pout() << "EBAMRLinINS::cc projecting velocity" << endl;
+    }
+
+  EBAMRDataOps::setCoveredVal(m_velo,0.0);
+  EBAMRDataOps::setCoveredAMRVal(m_velo,m_ebisl,m_params.m_refRatio,0.0);
+  EBAMRDataOps::setCoveredVal(m_gphi,0.0);
+  EBAMRDataOps::setCoveredAMRVal(m_gphi,m_ebisl,m_params.m_refRatio,0.0);
+
+  //make u* := u* + dt*gphi
+  //this makes the output pressure (I-P)u*= gphi*dt
+  EBAMRDataOps::incr(m_velo, m_gphi, m_dt);
+  //this puts  into gphi (new pressure gradient)*dt
+  //since we have added only a pure gradient, P(u*) = u^n+1 still
+  Real time = m_time;
+  if (!m_advanceGphiOnly)//rob thinks we want to use the new time for BCs only if not iterating grad(phi)
+    {
+      time += m_dt;
+    }
+  m_ccProjector->setTime(time);
+  //m_pres already scaled with dt/2 above in MAC projection
+  EBAMRDataOps::scale(m_pres, 2.);
+  m_ccProjector->setInitialPhi(m_pres);
+  m_ccProjector->project(m_velo, m_gphi);
+
+  const Vector<LevelData<EBCellFAB>* >& projPhi = m_ccProjector->getPhi();
+  EBAMRDataOps::assign(m_pres, projPhi);
+
+  filter(m_velo);
+
+  //pres now holds (new pressure)*dt
+  //gphi now holds (new pressure gradient)*dt
+  //so divide out the dt
+  EBAMRDataOps::scale(m_pres, 1.0/m_dt);
+  EBAMRDataOps::scale(m_gphi, 1.0/m_dt);
+
+  //post-processing
+  if (m_params.m_verbosity > 3)
+    {
+      m_ccProjector->kappaDivergence(m_cellScratch, m_velo);
+      Real norm[3];
+      for (int inorm = 0; inorm < 3; inorm++)
+        {
+          norm[inorm] = EBArith::norm(m_cellScratch, m_grids, m_ebisl,
+                                      m_params.m_refRatio, 0, inorm, EBNormType::OverBoth);
+        }
+      pout() << "div(vel) after cell project and filter: " <<
+        "L_inf = " << norm[0]  <<
+        ", L_1 = " << norm[1] <<
+        ", L_2 = " << norm[2] << endl;
+    }
+
+  //overwrite velocity with previous during initialization or after regridding
+  if (m_advanceGphiOnly)
+    {
+      for (int ilev=0; ilev<= m_finestLevel; ilev++)
+        {
+          tempLDPtr[ilev]->copyTo(interv, *m_velo[ilev], interv);
+        }
+    }
+
+  for (int ilev=0; ilev<= m_finestLevel; ilev++)
+    {
+      delete tempLDPtr[ilev];
+      delete extraSource[ilev];
+    }
+
+  EBAMRDataOps::setCoveredVal(m_velo, 0.0);
+  EBAMRDataOps::setCoveredVal(m_gphi, 0.0);
+  EBAMRDataOps::setCoveredVal(m_pres, 0.0);
+}
