@@ -38,6 +38,13 @@ EBAMRNoSubcycle(a_params, a_solverIBCFact, a_coarsestDomain, a_viscosity, a_ebis
   m_coveredBaseAdvVelLo.resize(nlevels, NULL);
   m_coveredBaseAdvVelHi.resize(nlevels, NULL);
 
+  m_baseVeloGrad.resize(SpaceDim);
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    m_baseVeloGrad[idir].resize(nlevels, NULL);
+  }
+
   allocateBaseflowDataHolders();  
 }
 /*********/
@@ -52,6 +59,14 @@ allocateBaseflowDataHolders()
       m_coveredBaseAdvVelLo[ilev]  = new LayoutData<Vector<BaseIVFAB<Real> * > >();
       m_coveredBaseAdvVelHi[ilev]  = new LayoutData<Vector<BaseIVFAB<Real> * > >();
     }
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    for (int ilev = 0; ilev <= m_params.m_maxLevel; ilev++)
+    {
+      m_baseVeloGrad[idir][ilev] = new LevelData<EBCellFAB>();
+    }
+  }
 }
 /*********/
 EBAMRLinINS::
@@ -80,7 +95,15 @@ EBAMRLinINS::
       delete m_coveredBaseAdvVelHi[ilev];
     }
 
-  for (int ilev=0; ilev<m_params.m_maxLevel; ilev++)
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    for (int ilev = 0; ilev <= m_params.m_maxLevel; ilev++)
+    {
+      delete m_baseVeloGrad[idir][ilev];
+    }
+  }
+
+  for (int ilev=0; ilev <= m_params.m_maxLevel; ilev++)
     {
       m_baseAdvVelo[ilev]          = NULL;
       m_coveredBaseAdvVelLo[ilev]  = NULL;
@@ -134,6 +157,53 @@ defineBaseflowIrregularData()
 }
 /*********/
 void EBAMRLinINS::
+defineBaseflowVelocityGradients()
+{
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    EBCellFactory ebcellfact(m_ebisl[ilev]);
+    for (int idir = 0; idir < SpaceDim; idir++)
+    {
+      m_baseVeloGrad[idir][ilev]->define(m_grids[ilev], SpaceDim,  3*IntVect::Unit, ebcellfact);
+    }
+  }
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    EBAMRDataOps::setToZero(m_baseVeloGrad[idir]);
+  }
+}
+/*********/
+void EBAMRLinINS::
+computeBaseflowVelocityGradients()
+{
+  Vector<LevelData<EBCellFAB>* > velComp(m_finestLevel+1,NULL);
+  
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    EBCellFactory ebcellfact(m_ebisl[ilev]);
+    velComp[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], 1, 3*IntVect::Unit, ebcellfact);
+  }
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      Interval srcInterv(idir, idir);
+      Interval dstInterv(0, 0);
+      m_baseVelo[ilev]->copyTo(srcInterv, *velComp[ilev], dstInterv);
+    }
+
+    m_ccProjector->gradient(m_baseVeloGrad[idir], velComp);
+  } 
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    delete velComp[ilev];
+  }
+}
+/*********/
+void EBAMRLinINS::
 setupCoveredBaseAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
                             const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo)
 {
@@ -180,6 +250,7 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   defineProjections();
 
   defineNewBaseflowVel();
+  defineBaseflowVelocityGradients();
 
     // intialize data for StabilityRun:
   if (m_params.m_verbosity >= 3)
@@ -193,6 +264,11 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
 
   EBAMRDataOps::setToZero(m_baseVelo);
   EBAMRDataOps::setToZero(m_baseAdvVelo);
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    EBAMRDataOps::setToZero(m_baseVeloGrad[idir]);
+  }
 
 /*
   // Baseflow pressure grad
@@ -254,6 +330,7 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
   {
     // setup baseflowAdvVelo if not setting up for plotting
     setupCoveredBaseAdvVelocity(m_baseVelo, m_baseAdvVelo);
+    computeBaseflowVelocityGradients();
   }
 
 /*
@@ -280,7 +357,7 @@ conclude()
 void EBAMRLinINS::
 computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const int& a_dir)
 {
-
+  
 }
 /*********/
 void EBAMRLinINS::

@@ -178,7 +178,7 @@ EBAMRNoSubcycle::
       delete m_coveredAdvVelLo[ilev];
       delete m_coveredAdvVelHi[ilev];
     }
-  for (int ilev=0; ilev<m_params.m_maxLevel; ilev++)
+  for (int ilev=0; ilev <= m_params.m_maxLevel; ilev++)
     {
       m_advVel[ilev]           = NULL;
       m_coveredAdvVelLo[ilev]  = NULL;

@@ -45,10 +45,14 @@ protected:
 
   void defineBaseflowIrregularData();
 
+  void defineBaseflowVelocityGradients();
+
   void defineNewBaseflowVel(const int a_startLevel = -1);
 
   void setupCoveredBaseAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
                                    const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo);
+
+  void computeBaseflowVelocityGradients();
 
 //  void advance();
 
@@ -74,6 +78,9 @@ protected:
   Vector<LevelData<EBFluxFAB>* > m_baseAdvVelo; // baseflow advective velocity
   Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >  m_coveredBaseAdvVelLo;
   Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* >  m_coveredBaseAdvVelHi;
+
+  // baseflow velocity gradient
+  Vector<Vector<LevelData<EBCellFAB>* > > m_baseVeloGrad;
 
 private:
 
