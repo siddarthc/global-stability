@@ -63,9 +63,15 @@ protected:
                                            Vector<LevelData<EBCellFAB>* >& a_scalOld,
                                            bool                            a_reallyVelocity);
 
-  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const int& a_dir);
+  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir);
 
-  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source);
+  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo);
+
+  // do dot poduct at each point
+  // output: a_out(i) = (a_in1(0)*a_in2(0) + a_in1(1)*a_in2(1)+...) at i
+  void pointwiseDotProduct(Vector<LevelData<EBCellFAB>* >& a_out,
+                           const Vector<LevelData<EBCellFAB>* >& a_in1,
+                           const Vector<LevelData<EBCellFAB>* >& a_in2);
 
   void conclude();
 

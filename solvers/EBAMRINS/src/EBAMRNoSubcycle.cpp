@@ -2310,7 +2310,7 @@ normalVelocityPredictor(Vector<LevelData<EBFluxFAB> *>&                       a_
         }
       EBAMRDataOps::setToZero(extraSource);
 
-      computeExtraSourceForPredictor(extraSource, idir);
+      computeExtraSourceForPredictor(extraSource, a_velo, idir);
 
       if (source != NULL)
         {
@@ -2516,7 +2516,7 @@ transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
         }
       EBAMRDataOps::setToZero(extraSource);
 
-      computeExtraSourceForPredictor(extraSource, icomp);
+      computeExtraSourceForPredictor(extraSource, a_scalOld, icomp);
 
       if (source != NULL)
         {
@@ -3199,7 +3199,7 @@ correctVelocity()
   EBAMRDataOps::setToZero(extraSource);
 
   //computes extra source term vector to be added below
-  computeExtraSourceForCorrector(extraSource);
+  computeExtraSourceForCorrector(extraSource, m_velo);
 
   if (!m_viscousCalc)
     {

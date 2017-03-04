@@ -438,11 +438,11 @@ protected:
   {
   }
 
-  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const int& a_dir)
+  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir)
   {
   }
 
-  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source)
+  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo)
   {
   }
 

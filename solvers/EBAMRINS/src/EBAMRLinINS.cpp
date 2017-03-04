@@ -355,15 +355,50 @@ conclude()
 }
 /*********/
 void EBAMRLinINS::
-computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const int& a_dir)
+pointwiseDotProduct(Vector<LevelData<EBCellFAB>* >& a_out,
+                    const Vector<LevelData<EBCellFAB>* >& a_in1,
+                    const Vector<LevelData<EBCellFAB>* >& a_in2)
 {
-  
+   
 }
 /*********/
 void EBAMRLinINS::
-computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source)
+computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir)
 {
+  pointwiseDotProduct(a_source, a_velo, m_baseVeloGrad[a_dir]);
+  EBAMRDataOps::scale(a_source, -1.0);
+}
+/*********/
+void EBAMRLinINS::
+computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo)
+{
+  Vector<LevelData<EBCellFAB>* > srcComp(m_finestLevel+1,NULL);
 
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    EBCellFactory ebcellfact(m_ebisl[ilev]);
+    srcComp[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], 1, 3*IntVect::Unit, ebcellfact);
+  }
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    EBAMRDataOps::setToZero(srcComp);
+    pointwiseDotProduct(srcComp, a_velo, m_baseVeloGrad[idir]);
+
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      Interval srcInterv(0, 0);
+      Interval dstInterv(idir, idir);
+      srcComp[ilev]->copyTo(srcInterv, *a_source[ilev], dstInterv);
+    }
+  }
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    delete srcComp[ilev];
+  }
+
+  EBAMRDataOps::scale(a_source, -1.0);
 }
 /*********/
 void EBAMRLinINS::
@@ -448,7 +483,7 @@ transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
         }
       EBAMRDataOps::setToZero(extraSource);
 
-      computeExtraSourceForPredictor(extraSource, icomp);
+      computeExtraSourceForPredictor(extraSource, a_scalOld, icomp);
 
       if (source != NULL)
         {
