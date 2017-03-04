@@ -8,6 +8,7 @@
 #include "EBAMRLinINS.H"
 #include "EBAMRDataOps.H"
 #include "DirichletPoissonEBBC.H"
+#include "EBNormalizeByVolumeFraction.H"
 
 /*********/
 EBAMRLinINS::
@@ -359,7 +360,64 @@ pointwiseDotProduct(Vector<LevelData<EBCellFAB>* >& a_out,
                     const Vector<LevelData<EBCellFAB>* >& a_in1,
                     const Vector<LevelData<EBCellFAB>* >& a_in2)
 {
-   
+  CH_assert(a_out[0]->nComp() == 1);
+  CH_assert(a_in1[0]->nComp() == a_in2[0]->nComp());
+
+  for (int ilev = 0; ilev < a_out.size(); ilev++)
+  {
+    LevelData<EBCellFAB>& outLD = *a_out[ilev];
+    const LevelData<EBCellFAB>& in1LD = *a_in1[ilev];
+    const LevelData<EBCellFAB>& in2LD = *a_in2[ilev];
+    const DisjointBoxLayout& levelGrids = outLD.getBoxes();
+    DataIterator levelDit = levelGrids.dataIterator();
+
+    // iterate over grids on this PID
+    for (levelDit.begin(); levelDit.ok(); ++levelDit)
+    {
+      EBCellFAB& outFAB = outLD[levelDit()];
+      const EBCellFAB& in1FAB = in1LD[levelDit()];
+      const EBCellFAB& in2FAB = in2LD[levelDit()];
+      const Box& box = levelGrids.get(levelDit());
+      const EBISBox& ebisBox = outFAB.getEBISBox();
+      IntVectSet ivs(box);
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        Real value = 0.;
+        for (int ivar = 0; ivar < in1FAB.nComp(); ivar++)
+        {
+          value += in1FAB(vofit(), ivar)*in2FAB(vofit(), ivar);
+        }
+
+        // kappa weighting
+        value *= ebisBox.volFrac(vofit());
+        outFAB(vofit(), 0) = value; 
+      }
+    }
+  }
+
+  EBAMRDataOps::setCoveredVal(a_out, 0.0);
+  EBAMRDataOps::setCoveredAMRVal(a_out, m_ebisl, m_params.m_refRatio, 0.0);
+
+  //now fill the ghost cells of the laplacian over coarse-fine interfaces with
+  //constant extrapolation from neighboring valid values
+  //this includes an exchange
+  for (int ilev = 0; ilev < a_out.size(); ilev++)
+  {
+    Interval interv(0, 0);
+    EBNormalizeByVolumeFraction normalized_source(m_eblg[ilev]);
+    normalized_source(*a_out[ilev],interv);
+    if (ilev==0)
+    {
+      //fill fine-fine ghost cells only
+      EBLevelDataOps::exchangeAll(*a_out[ilev]);
+    }
+    else//exchange happens in here
+    {
+      IntVect ivGhost = a_out[ilev]->ghostVect();
+      EBConstantCFInterp interpolator(m_grids[ilev], m_ebisl[ilev], m_domain[ilev], ivGhost);
+      interpolator.interpolate(*a_out[ilev]);
+    }
+  } 
 }
 /*********/
 void EBAMRLinINS::
