@@ -344,8 +344,8 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
 
   postInitialize();
 
-//  m_doRestart = false;
-  m_doRestart = true;
+  m_doRestart = false;
+//  m_doRestart = true;
   m_time = 0.;
 }
 /*********/
@@ -502,6 +502,7 @@ transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
       if (a_reallyVelocity)
         {
           advectBC  = m_ibc->getVelAdvectBC(icomp);
+//          advectBC = m_baseflowIBC->getVelAdvectBC(icomp);
           EBPatchGodunov::setDoingVel(1);
         }
       else
@@ -563,7 +564,8 @@ transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
                            m_coveredScratchLo,
                            m_coveredScratchHi,
                            advectBC,
-                           m_advVel,
+//                           m_advVel,
+                           m_baseAdvVelo,
                            source,
                            m_cellScratch,
                            m_velo);
@@ -606,7 +608,8 @@ transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,
                   (*m_coveredScratchHi[ilev])[dit()][icomp]->copy(box, interv, box, *(*m_coveredAdvVelHi[ilev])[dit()][icomp], interv);
 
                   EBFluxFAB& macExtrapFAB    = (*m_macScratch1[ilev])[dit()];
-                  const EBFluxFAB& advVelFAB = (*m_advVel[ilev])[dit()];
+//                  const EBFluxFAB& advVelFAB = (*m_advVel[ilev])[dit()];
+                  const EBFluxFAB& advVelFAB = (*m_baseAdvVelo[ilev])[dit()];
                   //icomp is the the component of the velocity and
                   //therefore also the face for which it is the normal component
                   macExtrapFAB[icomp].copy(advVelFAB[icomp]);
@@ -708,6 +711,8 @@ correctVelocity()
   // U* = U^n - dt*U.delu
   EBAMRDataOps::axby(UStar, m_velo, m_uDotDelU, 1., -1.*m_dt);
   computeExtraSourceForCorrector(extraSource, UStar);
+
+//  computeExtraSourceForCorrector(extraSource, m_velo);
 
   for (int ilev=0; ilev<= m_finestLevel; ilev++)
     {

@@ -57,6 +57,9 @@ public:
 
   void getBaseflow(Vector<LevelData<EBCellFAB>* >& a_baseLD, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_baseflowFile, bool a_incOverlapData) const;
 
+  // are you solving linearized perturbation equations?
+  virtual bool isLinearSolver() const;
+
 private:
 
   AMRParameters m_params;

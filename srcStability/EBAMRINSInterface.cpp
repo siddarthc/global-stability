@@ -132,6 +132,12 @@ readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBox
 #endif
 /*********/
 /*********/
+bool EBAMRINSInterface::
+isLinearSolver() const
+{
+  return m_doLinINS;
+}
+/*********/
 void EBAMRINSInterface::
 computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const
 {
