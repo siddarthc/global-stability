@@ -180,7 +180,10 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
       int totComp = this->nComp();
 //    CH_assert(totComp == nVeloComp + nPresComp);
 
-      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+//      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+
+      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./a_eps, 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+
 //    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
   } 
 

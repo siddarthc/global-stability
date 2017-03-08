@@ -83,7 +83,7 @@ protected:
   double m_integrationTime;
   double m_eps;
 
-  bool m_isLinearSolver;
+//  bool m_isLinearSolver;
 
   bool m_isBaseflowSet;
   bool m_isEpsSet;

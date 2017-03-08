@@ -185,7 +185,7 @@ computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 
   double pertSize;  
 
-  if (m_isLinearSolver)
+  if (isLinearSolver)
   {
     pertSize = m_eps;
   }
