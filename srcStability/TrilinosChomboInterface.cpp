@@ -192,7 +192,7 @@ computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
  
   else
   {
-    double pertSize = m_eps*m_baseflowL2Norm/vecNorm; // Theofillis paper
+    pertSize = m_eps*m_baseflowL2Norm/vecNorm; // Theofillis paper
 //    double pertSize = sqrt((1 + m_baseflowL2Norm)*m_eps)/vecNorm; // refer: JFNK: survey of applications... by Knoll and Keyes
 //    double pertSize = m_eps*m_baseflowL2Norm; // refer: https://arxiv.org/pdf/1502.03701.pdf
   }

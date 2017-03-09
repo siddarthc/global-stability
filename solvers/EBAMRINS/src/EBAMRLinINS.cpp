@@ -344,8 +344,8 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
 
   postInitialize();
 
-  m_doRestart = false;
-//  m_doRestart = true;
+//  m_doRestart = false;
+  m_doRestart = true;
   m_time = 0.;
 }
 /*********/
