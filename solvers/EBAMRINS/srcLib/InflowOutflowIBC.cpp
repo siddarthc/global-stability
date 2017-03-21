@@ -26,10 +26,9 @@ RefCountedPtr<BaseEBBCFactory>
 InflowOutflowIBC::getPressureEBBC()  const
 {
   NeumannPoissonEBBCFactory* neumptr = new NeumannPoissonEBBCFactory();
-
   neumptr->setValue(0.);
-
   RefCountedPtr<BaseEBBCFactory>  retval = RefCountedPtr<BaseEBBCFactory>(neumptr);
+
   return retval;
 }
 /***/
@@ -38,12 +37,13 @@ InflowOutflowIBC::getVelBC(int a_icomp) const
 {
   //this is only used in the helmholtz solve so always no slip
   RefCountedPtr<BaseDomainBCFactory> helmBC = RefCountedPtr<BaseDomainBCFactory>(new InflowOutflowHelmholtzDomainBCFactory(m_flowDir,
-                                                                                                                           m_inflowVel,
-                                                                                                                           m_doPoiseInflow,
-                                                                                                                           m_doSlipWallsHi,
-                                                                                                                           m_doSlipWallsLo,
-                                                                                                                           m_poiseInflowFunc,
-                                                                                                                           m_doWomersleyInflow));
+                                           m_inflowVel,
+                                           m_doPoiseInflow,
+                                           m_doSlipWallsHi,
+                                           m_doSlipWallsLo,
+                                           m_adjointSolver,
+                                           m_poiseInflowFunc,
+                                           m_doWomersleyInflow));
   return helmBC;
 }
 
@@ -73,6 +73,7 @@ getPressBC() const
                                                  m_doPoiseInflow,
                                                  m_doSlipWallsHi,
                                                  m_doSlipWallsLo,
+                                                 m_adjointSolver,
                                                  m_poiseInflowFunc,
                                                  m_doWomersleyInflow));
   return poisBC;
@@ -91,6 +92,7 @@ getVelAdvectBC(int a_velComp) const
                                           m_params,
                                           m_doSlipWallsHi,
                                           m_doSlipWallsLo,
+                                          m_adjointSolver,
                                           m_poiseInflowFunc,
                                           m_doWomersleyInflow));
   return retval;
@@ -116,6 +118,7 @@ getMACVelBC() const
                                                  m_doPoiseInflow,
                                                  m_doSlipWallsHi,
                                                  m_doSlipWallsLo,
+                                                 m_adjointSolver,
                                                  m_poiseInflowFunc,
                                                  m_doWomersleyInflow));
   return poisBC;

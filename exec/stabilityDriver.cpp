@@ -133,12 +133,12 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
 
   if (linINS)
   {
-      // hardwiring the perturbation velocity at inflow boundaries to 0
-      //      This is always true
-      Real inflowPertVel = 0.;
-      RefCountedPtr<InflowOutflowIBCFactory> solIBCFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowPertVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo, true));
+    // hardwiring the perturbation velocity at inflow boundaries to 0
+    //      This is always true
+    Real inflowPertVel = 0.;
+    RefCountedPtr<InflowOutflowIBCFactory> solIBCFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowPertVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo, doAdjoint));
 
-      solverIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(solIBCFact);
+    solverIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(solIBCFact);
   }
 
 // end solver IBC 

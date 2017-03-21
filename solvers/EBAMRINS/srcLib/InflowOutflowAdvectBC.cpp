@@ -131,7 +131,14 @@ fluxBC(EBFluxFAB&            a_primGdnv,
                 }
               else if (isOutflow)
                 {
-                   velComp = a_primExtrap(vof, 0);
+                   if (m_adjointSolver)
+                   {
+                     velComp = 0.;
+                   }
+                   else
+                   {
+                     velComp = a_primExtrap(vof, 0);
+                   }
                 }
               else //solid wall
                 {
@@ -141,7 +148,14 @@ fluxBC(EBFluxFAB&            a_primGdnv,
                     }
                   else
                     {
-                      velComp = a_primExtrap(vof, 0);
+                      if (m_adjointSolver)
+                      {
+                        velComp = 0.;
+                      }
+                      else
+                      {
+                        velComp = a_primExtrap(vof, 0);
+                      }
                     }
                 }
               a_primGdnv[a_dir](face, 0) = velComp;

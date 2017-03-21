@@ -131,6 +131,7 @@ public:
                                const IntVect& a_doSlipWallsLo,
                                const ProblemDomain& a_domain,
                                const RealVect& a_dx,
+                               const bool a_linearSolver,
                                RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                const bool& a_doWomersleyInflow=false)
   {
@@ -143,6 +144,8 @@ public:
     m_dx = a_dx;
     m_poiseInflowFunc = a_poiseBCValue;
     m_doWomersleyInflow = a_doWomersleyInflow;
+
+    m_linearSolver = a_linearSolver;
   }
 
 private:
@@ -162,6 +165,7 @@ private:
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
+  bool m_linearSolver;
 };
 
 class InflowOutflowPoissonDomainBCFactory: public BaseDomainBCFactory
@@ -177,6 +181,7 @@ public:
                                       const bool& a_doPoiseInflow,
                                       const IntVect& a_doSlipWallsHi,
                                       const IntVect& a_doSlipWallsLo,
+                                      const bool a_linearSolver,
                                       RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                       const bool& a_doWomersleyInflow=false)
   {
@@ -187,6 +192,8 @@ public:
     m_doSlipWallsLo = a_doSlipWallsLo;
     m_doWomersleyInflow = a_doWomersleyInflow;
     m_poiseInflowFunc = a_poiseBCValue;
+    
+    m_linearSolver = a_linearSolver;
   }
 
 
@@ -212,6 +219,7 @@ public:
                                          m_doSlipWallsLo,
                                          a_domain,
                                          a_dx,
+                                         m_linearSolver,
                                          m_poiseInflowFunc,
                                          m_doWomersleyInflow);
 
@@ -231,7 +239,8 @@ private:
   IntVect m_doSlipWallsLo;
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
-
+ 
+  bool m_linearSolver;
 };
 
 
@@ -344,6 +353,7 @@ public:
                                  const IntVect& a_doSlipWallsLo,
                                  const ProblemDomain& a_domain,
                                  const RealVect& a_dx,
+                                 const bool a_linearSolver,
                                  RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                  const bool& a_doWomersleyInflow=false)
   {
@@ -356,6 +366,8 @@ public:
     m_dx = a_dx;
     m_poiseInflowFunc = a_poiseBCValue;
     m_doWomersleyInflow = a_doWomersleyInflow;
+
+    m_linearSolver = a_linearSolver;
   }
 
 protected:
@@ -374,6 +386,8 @@ protected:
   RealVect m_dx;
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
+
+  bool m_linearSolver;
 };
 
 ///
@@ -389,6 +403,7 @@ public:
                                         const bool& a_doPoiseInflow,
                                         const IntVect& a_doSlipWallsHi,
                                         const IntVect& a_doSlipWallsLo,
+                                        const bool a_linearSolver,
                                         RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                         const bool& a_doWomersleyInflow=false)
   {
@@ -399,6 +414,8 @@ public:
     m_doSlipWallsLo = a_doSlipWallsLo;
     m_doWomersleyInflow = a_doWomersleyInflow;
     m_poiseInflowFunc = a_poiseBCValue;
+
+    m_linearSolver = a_linearSolver;
   }
 
 
@@ -424,6 +441,7 @@ public:
                                            m_doSlipWallsLo,
                                            a_domain,
                                            a_dx,
+                                           m_linearSolver,
                                            m_poiseInflowFunc,
                                            m_doWomersleyInflow);
 
@@ -444,6 +462,8 @@ protected:
   IntVect m_doSlipWallsLo;
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
+
+  bool m_linearSolver;
 };
 
 #include "NamespaceFooter.H"

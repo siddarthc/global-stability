@@ -179,12 +179,16 @@ void EBAMRLinINS::
 computeBaseflowVelocityGradients()
 {
   Vector<LevelData<EBCellFAB>* > velComp(m_finestLevel+1,NULL);
+  Vector<LevelData<EBCellFAB>* > gradComp(m_finestLevel+1, NULL);
   
   for (int ilev = 0; ilev <= m_finestLevel; ilev++)
   {
     EBCellFactory ebcellfact(m_ebisl[ilev]);
     velComp[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], 1, 3*IntVect::Unit, ebcellfact);
+    gradComp[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim, 3*IntVect::Unit, ebcellfact);
   }
+
+  EBAMRDataOps::setToZero(gradComp);
 
   for (int idir = 0; idir < SpaceDim; idir++)
   {
@@ -195,12 +199,35 @@ computeBaseflowVelocityGradients()
       m_baseVelo[ilev]->copyTo(srcInterv, *velComp[ilev], dstInterv);
     }
 
-    m_ccProjector->gradient(m_baseVeloGrad[idir], velComp);
-  } 
+//    m_ccProjector->gradient(m_baseVeloGrad[idir], velComp);
+    m_ccProjector->gradient(gradComp, velComp);
+
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      // copy gradient into corresponding holder
+      // for linear, m_baseVeloGrad = Ui,j
+      // for adjoint, m_baseVeloGrad = -1.*Uj,i
+      if (m_doAdjoint)
+      {
+        EBLevelDataOps::scale(*gradComp[ilev], -1.);
+        Interval dstInterv(idir, idir);
+        for (int idir1 = 0; idir1 < SpaceDim; idir1++)
+        {
+          Interval srcInterv(idir1, idir1);
+          gradComp[ilev]->copyTo(srcInterv, *m_baseVeloGrad[idir1][ilev], dstInterv);
+        } 
+      }
+      else
+      {
+        gradComp[ilev]->copyTo(*m_baseVeloGrad[idir][ilev]);        
+      }
+    }
+  } // end idir
 
   for (int ilev = 0; ilev <= m_finestLevel; ilev++)
   {
     delete velComp[ilev];
+    delete gradComp[ilev];
   }
 }
 /*********/
@@ -344,8 +371,8 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
 
   postInitialize();
 
-//  m_doRestart = false;
-  m_doRestart = true;
+  m_doRestart = false;
+//  m_doRestart = true;
   m_time = 0.;
 }
 /*********/
@@ -457,6 +484,32 @@ computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>* > & a_source, const 
   }
 
   EBAMRDataOps::scale(a_source, -1.0);
+}
+/*********/
+Real EBAMRLinINS::
+computeDt()
+{
+  Real retVal = EBAMRNoSubcycle::computeDt();
+
+  if (m_doAdjoint)
+  {
+    retVal *= -1.;
+  }
+
+  return retVal;
+}
+/*********/
+Real EBAMRLinINS::
+computeInitialDt()
+{
+  Real retVal = EBAMRNoSubcycle::computeInitialDt();
+  
+  if (m_doAdjoint)
+  {
+    retVal *= -1.;
+  }
+
+  return retVal;
 }
 /*********/
 void EBAMRLinINS::
