@@ -133,19 +133,12 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
 
   if (linINS)
   {
-    if (!doAdjoint)  // direct modes solve
-    {
       // hardwiring the perturbation velocity at inflow boundaries to 0
       //      This is always true
       Real inflowPertVel = 0.;
-      RefCountedPtr<InflowOutflowIBCFactory> solIBCFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowPertVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo));
+      RefCountedPtr<InflowOutflowIBCFactory> solIBCFact= RefCountedPtr<InflowOutflowIBCFactory>(new InflowOutflowIBCFactory(flowDir, inflowPertVel, orderEBBC, ibc_params, doSlipWallsHi, doSlipWallsLo, true));
 
       solverIBCFact = static_cast<RefCountedPtr<EBIBCFactory> >(solIBCFact);
-    }
-    else
-    {
-      MayDay::Error("Adjoint Solver not setup");
-    }
   }
 
 // end solver IBC 

@@ -49,6 +49,7 @@ public:
                    InflowOutflowParams a_params,
                    IntVect a_doSlipWallsHi,
                    IntVect a_doSlipWallsLo,
+                   bool a_linearSolver,
                    bool a_doPoiseInflow,
                    bool a_initPoiseData = false,
                    RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
@@ -70,6 +71,8 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
 
     m_params = a_params;
+
+    m_linearSolver = a_linearSolver;
   }
 
   ///
@@ -220,6 +223,8 @@ public:
 
   InflowOutflowParams m_params;
 
+  bool m_linearSolver;
+
   mutable bool    m_isPoiseDefined;
   mutable RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
@@ -245,6 +250,7 @@ public:
                           InflowOutflowParams a_params,
                           IntVect a_doSlipWallsHi=IntVect::Zero,
                           IntVect a_doSlipWallsLo=IntVect::Zero,
+                          bool a_linearSolver=false,
                           bool a_doPoiseInflow=false,
                           bool a_initPoiseData=false,
                           RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
@@ -266,6 +272,8 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
 
     m_params = a_params;
+
+    m_linearSolver = a_linearSolver;
   }
 
   ///
@@ -284,6 +292,7 @@ public:
                                                         m_params,
                                                         m_doSlipWallsHi,
                                                         m_doSlipWallsLo,
+                                                        m_linearSolver,
                                                         m_doPoiseInflow,
                                                         m_initPoiseData,
                                                         m_poiseInflowFunc,
@@ -304,6 +313,8 @@ protected:
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
   InflowOutflowParams m_params;
+
+  bool m_linearSolver;
 
   /// weak construction is bad but i will allow copy construction and assignment
   InflowOutflowIBCFactory()
