@@ -131,7 +131,7 @@ public:
                                const IntVect& a_doSlipWallsLo,
                                const ProblemDomain& a_domain,
                                const RealVect& a_dx,
-                               const bool a_linearSolver,
+                               const bool a_adjointSolver,
                                RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                const bool& a_doWomersleyInflow=false)
   {
@@ -145,7 +145,7 @@ public:
     m_poiseInflowFunc = a_poiseBCValue;
     m_doWomersleyInflow = a_doWomersleyInflow;
 
-    m_linearSolver = a_linearSolver;
+    m_adjointSolver = a_adjointSolver;
   }
 
 private:
@@ -165,7 +165,7 @@ private:
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
-  bool m_linearSolver;
+  bool m_adjointSolver;
 };
 
 class InflowOutflowPoissonDomainBCFactory: public BaseDomainBCFactory
@@ -181,7 +181,7 @@ public:
                                       const bool& a_doPoiseInflow,
                                       const IntVect& a_doSlipWallsHi,
                                       const IntVect& a_doSlipWallsLo,
-                                      const bool a_linearSolver,
+                                      const bool a_adjointSolver,
                                       RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                       const bool& a_doWomersleyInflow=false)
   {
@@ -193,7 +193,7 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
     m_poiseInflowFunc = a_poiseBCValue;
     
-    m_linearSolver = a_linearSolver;
+    m_adjointSolver = a_adjointSolver;
   }
 
 
@@ -219,7 +219,7 @@ public:
                                          m_doSlipWallsLo,
                                          a_domain,
                                          a_dx,
-                                         m_linearSolver,
+                                         m_adjointSolver,
                                          m_poiseInflowFunc,
                                          m_doWomersleyInflow);
 
@@ -240,7 +240,7 @@ private:
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
  
-  bool m_linearSolver;
+  bool m_adjointSolver;
 };
 
 
@@ -353,7 +353,7 @@ public:
                                  const IntVect& a_doSlipWallsLo,
                                  const ProblemDomain& a_domain,
                                  const RealVect& a_dx,
-                                 const bool a_linearSolver,
+                                 const bool a_adjointSolver,
                                  RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                  const bool& a_doWomersleyInflow=false)
   {
@@ -367,7 +367,7 @@ public:
     m_poiseInflowFunc = a_poiseBCValue;
     m_doWomersleyInflow = a_doWomersleyInflow;
 
-    m_linearSolver = a_linearSolver;
+    m_adjointSolver = a_adjointSolver;
   }
 
 protected:
@@ -387,7 +387,7 @@ protected:
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
-  bool m_linearSolver;
+  bool m_adjointSolver;
 };
 
 ///
@@ -403,7 +403,7 @@ public:
                                         const bool& a_doPoiseInflow,
                                         const IntVect& a_doSlipWallsHi,
                                         const IntVect& a_doSlipWallsLo,
-                                        const bool a_linearSolver,
+                                        const bool a_adjointSolver,
                                         RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                         const bool& a_doWomersleyInflow=false)
   {
@@ -415,7 +415,7 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
     m_poiseInflowFunc = a_poiseBCValue;
 
-    m_linearSolver = a_linearSolver;
+    m_adjointSolver = a_adjointSolver;
   }
 
 
@@ -441,7 +441,7 @@ public:
                                            m_doSlipWallsLo,
                                            a_domain,
                                            a_dx,
-                                           m_linearSolver,
+                                           m_adjointSolver,
                                            m_poiseInflowFunc,
                                            m_doWomersleyInflow);
 
@@ -463,7 +463,7 @@ protected:
   bool m_doWomersleyInflow;
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
-  bool m_linearSolver;
+  bool m_adjointSolver;
 };
 
 #include "NamespaceFooter.H"

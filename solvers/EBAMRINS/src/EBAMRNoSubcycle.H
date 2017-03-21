@@ -522,7 +522,7 @@ protected:
   virtual Real computeDt();
 
   /// compute dt with initial data
-  Real computeInitialDt();
+  virtual Real computeInitialDt();
 
   // compute vorticity on level a_level
   void computeVorticity(LevelData<EBCellFAB>& a_vorticity, int a_level) ;
