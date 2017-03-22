@@ -34,7 +34,7 @@ void InflowOutflowPoissonDomainBC::getFluxStencil(      VoFStencil&      a_stenc
                                                   const EBISBox&         a_ebisBox)
 {
   bool isOutflow= (a_side==Side::Hi) && (a_idir==m_flowDir);
-  if (!isOutflow)
+  if (!isOutflow || m_adjointSolver)
     {
       NeumannPoissonDomainBC neumannBC;
       neumannBC.setValue(0.0);
@@ -77,7 +77,7 @@ getFaceVel(Real&                 a_faceFlux,
 
   const EBISBox& ebisBox= a_vel[0].getEBISBox();
 
-  if (isOutflow)
+  if (isOutflow && !m_adjointSolver)
     {
       //quadratic extrapolation with homogeneous Neumann for outflow bc
       a_faceFlux = EBArith::extrapFaceVelToOutflow(a_face,a_side,a_idir,ebisBox.getEBGraph(),a_vel[a_idir],0);//be careful of this 0, it is the component
@@ -151,7 +151,7 @@ void InflowOutflowPoissonDomainBC::getFaceFlux(BaseFab<Real>&        a_faceFlux,
 {
   //for phi: outflow  dirichlet. inflow neumann
   bool isOutflow= (a_side==Side::Hi) && (a_idir==m_flowDir);
-  if (!isOutflow)
+  if (!isOutflow || m_adjointSolver)
     {
       NeumannPoissonDomainBC neumannBC;
       neumannBC.setValue(0.0);
@@ -179,7 +179,7 @@ isDirichletDom(const VolIndex&   a_ivof,
 
   bool isOutflow = (side==1) && (idir==m_flowDir);
   // this logic is valid only for the projection
-  if (!isOutflow)
+  if (!isOutflow || m_adjointSolver)
     {
       return false;
     }
@@ -203,7 +203,7 @@ void InflowOutflowPoissonDomainBC::getFaceFlux(Real&                 a_faceFlux,
                                                const bool&           a_useHomogeneous)
 {
   bool isOutflow= (a_side==Side::Hi) && (a_idir==m_flowDir);
-  if (!isOutflow)
+  if (!isOutflow || m_adjointSolver)
     {
       NeumannPoissonDomainBC neumannBC;
       neumannBC.setValue(0.0);
@@ -234,7 +234,7 @@ void InflowOutflowPoissonDomainBC::getInhomFaceFlux(Real&                 a_face
                                                     const Real&           a_time)
 {
   bool isOutflow= (a_side==Side::Hi) && (a_idir==m_flowDir);
-  if (!isOutflow)
+  if (!isOutflow || m_adjointSolver)
     {
       NeumannPoissonDomainBC neumannBC;
       neumannBC.setValue(0.0);
@@ -269,7 +269,7 @@ void InflowOutflowPoissonDomainBC::getFaceGradPhi(Real&                 a_faceFl
 {
   bool isOutflow= (a_side==Side::Hi) && (a_idir==m_flowDir);
 
-  if (!isOutflow)
+  if (!isOutflow || m_adjointSolver)
     {
       NeumannPoissonDomainBC neumannBC;
       neumannBC.setValue(0.0);
@@ -296,7 +296,7 @@ void InflowOutflowHelmholtzDomainBC::getFluxStencil(      VoFStencil&      a_ste
 {
   bool isOutflow = (a_side==Side::Hi) && (a_idir==m_flowDir);
   bool isSlipWall= ((a_idir!=m_flowDir) && (a_idir != a_comp) && ((m_doSlipWallsHi[a_idir]==1 && a_side == Side::Hi)||(m_doSlipWallsLo[a_idir]==1 && a_side == Side::Lo)));
-  if ((isOutflow || isSlipWall))
+  if ((isOutflow || isSlipWall) && !m_adjointSolver)
     {
       NeumannPoissonDomainBC neumannBC;
       neumannBC.setValue(0.0);
@@ -351,7 +351,7 @@ void InflowOutflowHelmholtzDomainBC::getFaceFlux(BaseFab<Real>&        a_faceFlu
   bool isOutflow =  ((a_side==Side::Hi) && (a_idir==m_flowDir));
   bool isInflow =  ((a_side==Side::Lo) && (a_idir==m_flowDir));
   bool isSlipWall = ((a_idir!=m_flowDir) && (a_idir != velcomp) && ((m_doSlipWallsHi[a_idir]==1 && a_side == Side::Hi)||(m_doSlipWallsLo[a_idir]==1 && a_side == Side::Lo)));
-  bool isVelNeum =  ((isOutflow || isSlipWall));
+  bool isVelNeum =  ((isOutflow || isSlipWall) && !m_adjointSolver);
 
   if (isVelNeum)
     {
@@ -455,7 +455,7 @@ void InflowOutflowHelmholtzDomainBC::getFaceFlux(Real&                 a_faceFlu
   bool isOutflow =  ((a_side==Side::Hi) && (a_idir==m_flowDir));
   bool isInflow =  ((a_side==Side::Lo) && (a_idir==m_flowDir));
   bool isSlipWall = ((a_idir!=m_flowDir) && (a_idir != velcomp) && ((m_doSlipWallsHi[a_idir]==1 && a_side == Side::Hi)||(m_doSlipWallsLo[a_idir]==1 && a_side == Side::Lo)));
-  bool isVelNeum =  ((isOutflow || isSlipWall));
+  bool isVelNeum =  ((isOutflow || isSlipWall) && !m_adjointSolver);
 
   if (isVelNeum)
     {
@@ -553,7 +553,7 @@ isDirichletDom(const VolIndex&   a_ivof,
   int velcomp =  DirichletPoissonEBBC::s_velComp;
   bool isOutflow =  ((side== 1) && (idir==m_flowDir));
   bool isSlipWall = ((idir!=m_flowDir) && (idir != velcomp) && ((m_doSlipWallsHi[idir]==1 && side == 1)||(m_doSlipWallsLo[idir]==1 && side == -1)));
-  bool isVelNeum =  ((isOutflow || isSlipWall));
+  bool isVelNeum =  ((isOutflow || isSlipWall) && !m_adjointSolver);
   if (isVelNeum)
     {
       return false;
@@ -582,7 +582,7 @@ void InflowOutflowHelmholtzDomainBC::getInhomFaceFlux(Real&                 a_fa
   bool isOutflow =  ((a_side==Side::Hi) && (a_idir==m_flowDir));
   bool isInflow =  ((a_side==Side::Lo) && (a_idir==m_flowDir));
   bool isSlipWall = ((a_idir!=m_flowDir) && (a_idir != velcomp) && ((m_doSlipWallsHi[a_idir]==1 && a_side == Side::Hi)||(m_doSlipWallsLo[a_idir]==1 && a_side == Side::Lo)));
-  bool isVelNeum =  ((isOutflow || isSlipWall));
+  bool isVelNeum =  ((isOutflow || isSlipWall) && !m_adjointSolver);
 
   if (isVelNeum)
     {

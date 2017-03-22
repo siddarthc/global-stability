@@ -19,9 +19,9 @@ viscosity             = 0.01
 
 refine_threshold      = 1.0
 
-do_slip_walls         = 1
-do_slip_walls_hi      = 0 1 1
-do_slip_walls_lo      = 0 1 1
+do_slip_walls         = 0
+do_slip_walls_hi      = 0 0 1
+do_slip_walls_lo      = 0 0 1
 
 order_ebbc            = 2
 order_time            = 2
@@ -103,7 +103,7 @@ max_restarts = 4
 sort_EV = LM
 
 do_linearized_INS = true
-do_adjoint = false
+do_adjoint = true
 do_first_order_fre_deriv = false
 plot_snapshots = false
 

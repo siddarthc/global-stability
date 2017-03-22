@@ -489,7 +489,7 @@ run(Real a_maxTime, int a_maxStep)
           m_dt = computeDt();
         }
 
-      if (m_dt < 1e-5 * initDt)
+      if (abs(m_dt) < 1e-5 * abs(initDt))
       {
         pout() << "EBAMRNoSubcycle::run -- Time step too small" << endl;
         break;
