@@ -3498,7 +3498,7 @@ addExtraOutputData(LevelData<EBCellFAB>& a_outputData, const int a_startDstInter
 #ifdef CH_USE_HDF5
 /*****************/
 void
-EBAMRNoSubcycle::writePlotFile(const std::string* a_pltName)
+EBAMRNoSubcycle::writePlotFile(const std::string* a_fileName)
 {
   CH_TIME("EBAMRNoSubcycle::writePlotFile");
   if (m_params.m_verbosity > 3)
@@ -3601,13 +3601,13 @@ EBAMRNoSubcycle::writePlotFile(const std::string* a_pltName)
     }
 
   string filename;
-  if (a_pltName  == NULL)
+  if (a_fileName  == NULL)
   {
     filename = "plot.nx"+SSTR(ncells)+".step."+SSTR(m_curStep)+"."+SSTR(SpaceDim)+"d.hdf5";
   }
   else 
   {
-    filename = *a_pltName;
+    filename = "plot_" + *a_fileName;
   }
 
   writeEBHDF5(filename,
@@ -3634,7 +3634,7 @@ EBAMRNoSubcycle::writePlotFile(const std::string* a_pltName)
 /*****************/
 /*****************/
 void
-EBAMRNoSubcycle::writeCheckpointFile()
+EBAMRNoSubcycle::writeCheckpointFile(const std::string* a_fileName)
 {
   CH_TIME("EBAMRNoSubcycle::writeCheckpointFile");
   CH_assert(m_isSetup);
@@ -3662,12 +3662,22 @@ EBAMRNoSubcycle::writeCheckpointFile()
   header.m_int ["use_fixed_dt"]           = iuseFixedDt;
   header.m_int ["steady_state"]           = m_steadyState;
 
-  char iter_str[100];
+//  char iter_str[100];
 
   int ncells = m_domain[0].size(0);
-  sprintf(iter_str, "check%d.nx%d.%dd.hdf5", m_curStep, ncells, SpaceDim);
+//  sprintf(iter_str, "check%d.nx%d.%dd.hdf5", m_curStep, ncells, SpaceDim);
 
-  HDF5Handle handleOut(iter_str, HDF5Handle::CREATE);
+  string filename;
+  if (a_fileName  == NULL)
+  {
+    filename = "check.nx"+SSTR(ncells)+".step."+SSTR(m_curStep)+"."+SSTR(SpaceDim)+"d.hdf5";
+  }
+  else
+  {
+    filename = "check_" + *a_fileName;
+  }
+
+  HDF5Handle handleOut(filename, HDF5Handle::CREATE);
   //Write the header for this level
   header.writeToFile(handleOut);
   for (int ilev = 0; ilev <= m_finestLevel; ilev++)
@@ -4135,12 +4145,17 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
 }
 /*********/
 void EBAMRNoSubcycle::
-concludeStabilityRun(const std::string* a_pltName)
+concludeStabilityRun(const std::string* a_fileName, bool a_writeCheckpoint)
 {
 
 #ifdef CH_USE_HDF5
 
-  writePlotFile(a_pltName);
+  writePlotFile(a_fileName);
+
+  if (a_writeCheckpoint)
+  {
+    writeCheckpointFile(a_fileName);
+  }
 
 #endif
 }

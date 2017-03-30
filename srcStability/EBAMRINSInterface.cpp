@@ -276,16 +276,16 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
     std::string pltNameX = "vector_x_at_step"+SSTR(s_callCounter) + ".hdf5";
 
     pout() << "plotting a_x" << endl;
-    plotEpetraVector(a_x, a_baseflowDBL, a_baseflowEBLG, pltNameX, a_incOverlapData);
+    plotEpetraVector(a_x, a_baseflowDBL, a_baseflowEBLG, pltNameX, a_incOverlapData,false);
 
     pout() << "plotting a_y" << endl;
-    plotEpetraVector(a_y, a_baseflowDBL, a_baseflowEBLG, pltNameY, a_incOverlapData);
+    plotEpetraVector(a_y, a_baseflowDBL, a_baseflowEBLG, pltNameY, a_incOverlapData,false);
   }
 }
 /*********/
 /*********/
 void EBAMRINSInterface::
-plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_plotName, bool a_incOverlapData) const
+plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_fileName, bool a_incOverlapData, bool a_writeCheckpoint) const
 {
   pout() << "plotting EigenEvector" << endl;
 
@@ -297,7 +297,7 @@ plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_ba
 
     solver.setupForStabilityRun(a_v, a_baseflowDBL, a_baseflowEBLG, baseflowFile, 1.0, a_incOverlapData, true);
 //    solver.run(0,0);
-    solver.concludeStabilityRun(&a_plotName);
+    solver.concludeStabilityRun(&a_fileName, a_writeCheckpoint);
   }
   else
   {
@@ -307,7 +307,7 @@ plotEpetraVector(const Epetra_Vector& a_v, const Vector<DisjointBoxLayout>& a_ba
 
     solver.setupForStabilityRun(a_v, a_baseflowDBL, a_baseflowEBLG, baseflowFile, 1.0, a_incOverlapData, true);
 //    solver.run(0,0);
-    solver.concludeStabilityRun(&a_plotName);
+    solver.concludeStabilityRun(&a_fileName, a_writeCheckpoint);
   }
 }
 /*********/

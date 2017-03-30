@@ -62,7 +62,7 @@ public:
   virtual int computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const = 0;
 
   // plot solution in the Epetra_Vector
-  virtual void plotEpetraVector(const Epetra_Vector& a_v, std::string a_plotName) const = 0;
+  virtual void plotEpetraVector(const Epetra_Vector& a_v, std::string a_fileName) const = 0;
 
 /*
   bool isLinearSolver()

@@ -199,8 +199,8 @@ computeDominantModes(double      a_tol,
 
       for (int icomp = 0; icomp < a_plotEVComps.size(); icomp++)
       {
-        std::string plotName = "plot_computed_evec_comp_" + SSTR(icomp);
-        m_solverInterface->plotEpetraVector(*((*castEigVec)(icomp)), plotName);
+        std::string fileName = "computed_evec_comp_" + SSTR(icomp);
+        m_solverInterface->plotEpetraVector(*((*castEigVec)(icomp)), fileName);
       }
     }
 

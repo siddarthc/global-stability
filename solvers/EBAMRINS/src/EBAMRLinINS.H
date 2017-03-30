@@ -60,10 +60,10 @@ protected:
 //  void corrector();
 
   /// compute dt
-  Real computeDt();
+//  Real computeDt();
 
   /// compute dt with initial data
-  Real computeInitialDt();
+//  Real computeInitialDt();
 
   virtual void transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >& a_uGradS,
                                            Vector<LevelData<EBCellFAB>* >& a_scalOld,

@@ -209,7 +209,6 @@ computeBaseflowVelocityGradients()
       // for adjoint, m_baseVeloGrad = -1.*Uj,i
       if (m_doAdjoint)
       {
-        EBLevelDataOps::scale(*gradComp[ilev], -1.);
         Interval dstInterv(idir, idir);
         for (int idir1 = 0; idir1 < SpaceDim; idir1++)
         {
@@ -354,6 +353,12 @@ setupForStabilityRun(const Epetra_Vector&             a_x,
 
   defineBaseflowIrregularData();
 
+  if (m_doAdjoint)
+  {
+    EBAMRDataOps::scale(m_baseVelo, -1.0);
+    EBAMRDataOps::scale(m_baseAdvVelo, -1.0);
+  }
+
   if (!a_setupForPlottingData)
   {
     // setup baseflowAdvVelo if not setting up for plotting
@@ -451,7 +456,7 @@ void EBAMRLinINS::
 computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>* > & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir)
 {
   pointwiseDotProduct(a_source, a_velo, m_baseVeloGrad[a_dir]);
-  EBAMRDataOps::scale(a_source, -1.0);
+  if (!m_doAdjoint) EBAMRDataOps::scale(a_source, -1.0);
 }
 /*********/
 void EBAMRLinINS::
@@ -483,9 +488,10 @@ computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>* > & a_source, const 
     delete srcComp[ilev];
   }
 
-  EBAMRDataOps::scale(a_source, -1.0);
+  if(!m_doAdjoint) EBAMRDataOps::scale(a_source, -1.0);
 }
 /*********/
+/*
 Real EBAMRLinINS::
 computeDt()
 {
@@ -498,7 +504,9 @@ computeDt()
 
   return retVal;
 }
+*/
 /*********/
+/*
 Real EBAMRLinINS::
 computeInitialDt()
 {
@@ -511,6 +519,7 @@ computeInitialDt()
 
   return retVal;
 }
+*/
 /*********/
 void EBAMRLinINS::
 transverseVelocityPredictor(Vector<LevelData<EBCellFAB>* >&    a_uDotDelU,

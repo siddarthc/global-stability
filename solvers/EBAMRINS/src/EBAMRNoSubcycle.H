@@ -265,7 +265,7 @@ public:
   // Sid added for Stability solves : 11/16/16
   void setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData, bool a_setupForPlottingData = false);
 
-  void concludeStabilityRun(const std::string* a_pltName);
+  void concludeStabilityRun(const std::string* a_fileName, bool a_writeCheckpoint);
 
   /// advance solution.  returns time of final solution
   Real run(Real a_maxTime, int a_maxStep);
@@ -385,7 +385,7 @@ protected:
 
 #ifdef CH_USE_HDF5
   ///
-  void writeCheckpointFile();
+  void writeCheckpointFile(const std::string* a_fileName = NULL);
 
   ///
   virtual void writeExtraDataToCheckpoint(HDF5Handle& a_handleOut, const int ilev);
@@ -397,7 +397,7 @@ protected:
   virtual void readCheckpointFile(const string& a_restartFile);
 
   ///
-  virtual void writePlotFile(const std::string* a_pltName = NULL);
+  virtual void writePlotFile(const std::string* a_fileName = NULL);
 
   ///
   virtual void addExtraOutputData(LevelData<EBCellFAB>& a_outputData, const int a_startDstInterv, const int a_ilev);

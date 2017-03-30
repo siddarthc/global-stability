@@ -206,11 +206,11 @@ computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const
 }
 /*********/
 void TrilinosChomboInterface::
-plotEpetraVector(const Epetra_Vector& a_v, std::string a_plotName) const
+plotEpetraVector(const Epetra_Vector& a_v, std::string a_fileName) const
 {
   CH_assert(isSetupForStabilityRun());
-  std::string name = a_plotName + ".hdf5";
-  m_solverInterface->plotEpetraVector(a_v, m_baseflowDBL, m_baseflowEBLG, name, m_incOverlapData);
+  std::string name = a_fileName + ".hdf5";
+  m_solverInterface->plotEpetraVector(a_v, m_baseflowDBL, m_baseflowEBLG, name, m_incOverlapData, true);
 }
 /*********/
 void TrilinosChomboInterface::
