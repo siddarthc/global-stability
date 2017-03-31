@@ -64,6 +64,43 @@ public:
                                           const Vector<int>&             a_refRatio,
                                           double                         a_overlapVal = 0.);
 
+  // makes a_v = a_v*scaleCD*a_ChomboData
+  // a_startCompV is the starting component of a_v
+  // a_startCompCD is the starting comp of a_ChomboData
+  // a_nComp is the number of components to be added
+  // a_totComp is the total no. of components in the a_v (not the length.)
+  //    For example, if a_v contains velx,vely,velz,pres then totComp = 4
+  //            and if only the value corresponding to pressure needs to be added, nComp = 1
+  // 
+  static void scaleEpetraVecByChomboData(Epetra_Vector*                        a_v,
+                                         const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
+                                         const double&                         a_scaleCD,
+                                         const int&                            a_startCompV,
+                                         const int&                            a_startCompCD,
+                                         const int&                            a_nComp,
+                                         const int&                            a_totComp,
+                                         bool                                  a_incOverlapData,
+                                         const Vector<int>&                    a_refRatio);
+
+
+  // makes a_v = a_v/(scaleCD*a_ChomboData)
+  // a_startCompV is the starting component of a_v
+  // a_startCompCD is the starting comp of a_ChomboData
+  // a_nComp is the number of components to be added
+  // a_totComp is the total no. of components in the a_v (not the length.)
+  //    For example, if a_v contains velx,vely,velz,pres then totComp = 4
+  //            and if only the value corresponding to pressure needs to be added, nComp = 1
+  //
+  // a_tol is to avoid division by small numbers. if denominator < a_tol, it is limited to 1
+  static void divideEpetraVecByChomboData(Epetra_Vector*                        a_v,
+                                          const Vector<LevelData<EBCellFAB>* >& a_ChomboData,
+                                          const double&                         a_scaleCD,
+                                          const int&                            a_startCompV,
+                                          const int&                            a_startCompCD,
+                                          const int&                            a_nComp,
+                                          const int&                            a_totComp,
+                                          bool                                  a_incOverlapData,
+                                          const Vector<int>&                    a_refRatio);
 
   // makes a_v = scaleV*a_v + scaleCD*a_ChomboData
   // a_startCompV is the starting component of a_v
