@@ -216,6 +216,10 @@ computeStructuralSensitivity(Vector<LevelData<EBCellFAB>* >& a_out,
       }
     }
   }
+
+  Real max, min;
+  EBAMRDataOps::getMaxMin(max, min, a_out, 0);
+  EBAMRDataOps::scale(a_out, 1./max);
 }
 /*********/
 void WavemakerUtils::
