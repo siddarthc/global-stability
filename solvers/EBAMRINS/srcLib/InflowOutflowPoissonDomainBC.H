@@ -15,6 +15,8 @@
 #include "BaseDomainBC.H"
 #include "PoiseuilleInflowBCValue.H"
 
+#include "RobinBCDataHolder.H"
+
 #include "NamespaceHeader.H"
 
 ///
@@ -107,11 +109,32 @@ public:
                               const RealVect&       a_centroid,
                               const bool&           a_useHomogeneous);
 
+
+  virtual void enforceFaceVel(LevelData<EBFluxFAB>&    a_velocity,
+                              const DisjointBoxLayout& a_grids,
+                              const EBISLayout&        a_ebisl,
+                              const ProblemDomain&     a_domain,
+                              const RealVect&          a_dx,
+                              const Real&              a_time,
+                              const RealVect&          a_origin,
+                              const bool&              a_doDivFreeOutflow);
+
+  virtual void enforceFaceVel(LevelData<EBFluxFAB>&    a_velocity,
+                              const DisjointBoxLayout& a_grids,
+                              const EBISLayout&        a_ebisl,
+                              const ProblemDomain&     a_domain,
+                              const RealVect&          a_dx,
+                              const Real&              a_time,
+                              const RealVect&          a_origin,
+                              const bool&              a_doDivFreeOutflow,
+                              const int&               a_comp);
+
   ///
   /**
      This is used by the projections to get
      velocity at domain faces.  Sets velocity to a InflowOutflow  value.
   */
+
   virtual void getFaceVel(Real&                 a_faceFlux,
                           const FaceIndex&      a_face,
                           const EBFluxFAB&      a_vel,
@@ -123,6 +146,18 @@ public:
                           const Side::LoHiSide& a_side,
                           const bool&           a_doDivFreeOutflow);
 
+  virtual void getFaceVel(Real&                 a_faceFlux,
+                          const FaceIndex&      a_face,
+                          const EBFluxFAB&      a_vel,
+                          const RealVect&       a_probLo,
+                          const RealVect&       a_dx,
+                          const int&            a_idir,
+                          const int&            a_icomp,
+                          const Real&           a_time,
+                          const Side::LoHiSide& a_side,
+                          const bool&           a_doDivFreeOutflow,
+                          const DataIndex&      a_dit);
+
   ///
   InflowOutflowPoissonDomainBC(const int& a_flowDir,
                                const Real& a_inflowVel,
@@ -132,6 +167,7 @@ public:
                                const ProblemDomain& a_domain,
                                const RealVect& a_dx,
                                const bool a_adjointSolver,
+                               const RobinBCData* a_RobinBCData = NULL,
                                RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                const bool& a_doWomersleyInflow=false)
   {
@@ -146,8 +182,23 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
 
     m_adjointSolver = a_adjointSolver;
+    m_RobinBCData = a_RobinBCData;
   }
 
+protected:
+/*
+  virtual void getFaceVel(Real&                 a_faceFlux,
+                          const FaceIndex&      a_face,
+                          const EBFluxFAB&      a_vel,
+                          const RealVect&       a_probLo,
+                          const RealVect&       a_dx,
+                          const int&            a_idir,
+                          const int&            a_icomp,
+                          const Real&           a_time,
+                          const Side::LoHiSide& a_side,
+                          const bool&           a_doDivFreeOutflow,
+                          const DataIndex&      a_dit);
+*/
 private:
 
   ///weak construction forbidden to keep things simple
@@ -166,6 +217,8 @@ private:
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
   bool m_adjointSolver;
+
+  const RobinBCData* m_RobinBCData;
 };
 
 class InflowOutflowPoissonDomainBCFactory: public BaseDomainBCFactory
@@ -182,6 +235,7 @@ public:
                                       const IntVect& a_doSlipWallsHi,
                                       const IntVect& a_doSlipWallsLo,
                                       const bool a_adjointSolver,
+                                      const RobinBCData* a_RobinBCData,
                                       RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                       const bool& a_doWomersleyInflow=false)
   {
@@ -194,6 +248,7 @@ public:
     m_poiseInflowFunc = a_poiseBCValue;
     
     m_adjointSolver = a_adjointSolver;
+    m_RobinBCData = a_RobinBCData;
   }
 
 
@@ -220,6 +275,7 @@ public:
                                          a_domain,
                                          a_dx,
                                          m_adjointSolver,
+                                         m_RobinBCData,
                                          m_poiseInflowFunc,
                                          m_doWomersleyInflow);
 
@@ -241,6 +297,7 @@ private:
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
  
   bool m_adjointSolver;
+  const RobinBCData* m_RobinBCData;
 };
 
 
@@ -354,6 +411,7 @@ public:
                                  const ProblemDomain& a_domain,
                                  const RealVect& a_dx,
                                  const bool a_adjointSolver,
+                                 const RobinBCData* a_RobinBCData = NULL,
                                  RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                  const bool& a_doWomersleyInflow=false)
   {
@@ -368,6 +426,7 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
 
     m_adjointSolver = a_adjointSolver;
+    m_RobinBCData = a_RobinBCData;
   }
 
 protected:
@@ -388,6 +447,7 @@ protected:
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
   bool m_adjointSolver;
+  const RobinBCData* m_RobinBCData;
 };
 
 ///
@@ -404,6 +464,7 @@ public:
                                         const IntVect& a_doSlipWallsHi,
                                         const IntVect& a_doSlipWallsLo,
                                         const bool a_adjointSolver,
+                                        const RobinBCData* a_RobinBCData,
                                         RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                         const bool& a_doWomersleyInflow=false)
   {
@@ -416,6 +477,7 @@ public:
     m_poiseInflowFunc = a_poiseBCValue;
 
     m_adjointSolver = a_adjointSolver;
+    m_RobinBCData = a_RobinBCData;
   }
 
 
@@ -442,6 +504,7 @@ public:
                                            a_domain,
                                            a_dx,
                                            m_adjointSolver,
+                                           m_RobinBCData,
                                            m_poiseInflowFunc,
                                            m_doWomersleyInflow);
 
@@ -464,6 +527,7 @@ protected:
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
   bool m_adjointSolver;
+  const RobinBCData* m_RobinBCData;
 };
 
 #include "NamespaceFooter.H"

@@ -9,6 +9,7 @@
 #include "EBAMRDataOps.H"
 #include "DirichletPoissonEBBC.H"
 #include "EBNormalizeByVolumeFraction.H"
+#include "RobinBCDataHolder.H"
 
 /*********/
 EBAMRLinINS::
@@ -46,7 +47,28 @@ EBAMRNoSubcycle(a_params, a_solverIBCFact, a_coarsestDomain, a_viscosity, a_ebis
     m_baseVeloGrad[idir].resize(nlevels, NULL);
   }
 
-  allocateBaseflowDataHolders();  
+  allocateBaseflowDataHolders();
+
+  if (m_doAdjoint)
+  {
+    RobinBCData RobBCData;
+    std::map<Real, int> levDxMap;
+    Real Re = -1./m_viscosity;
+     
+    for (int ilev = 0; ilev < nlevels; ilev++)
+    {
+      levDxMap[m_dx[ilev]] = ilev;
+    }
+/*
+    RobBCData.dataPtr = &m_baseAdvVelo;
+    RobBCData.levelDxMap = levDxMap;
+    RobBCData.Re = -1./m_viscosity; // -1 because baseAdvVelo gets multiplied by -1
+    RobBCData.dxVect = m_dx;
+//    m_ibc->setRobinBCData(RobBCData);
+*/
+    m_ibc->setRobinBCData(m_baseAdvVelo, levDxMap, Re, m_dx);
+ 
+  }
 }
 /*********/
 void EBAMRLinINS::

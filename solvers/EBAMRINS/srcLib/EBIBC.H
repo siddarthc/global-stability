@@ -22,6 +22,8 @@
 #include "BaseDomainBC.H"
 #include "BaseEBBC.H"
 
+#include "RobinBCDataHolder.H"
+
 #include "NamespaceHeader.H"
 
 ///
@@ -201,6 +203,27 @@ public:
     //code to make compilers shut up
     return RefCountedPtr<BaseEBBCFactory>();
   }
+
+
+  virtual void setRobinBCData(const RobinBCData& a_RobinBCData)
+  {
+    m_RobinBCData = a_RobinBCData;
+  }
+
+  virtual void setRobinBCData(const Vector<LevelData<EBFluxFAB>* >& a_dataPtr,
+                              const std::map<Real, int>&            a_levDxMap,
+                              const Real&                           a_multiplier,
+                              const Vector<Real>&                   a_dxVect)
+  {
+    m_RobinBCData.dataPtr = &a_dataPtr;
+    m_RobinBCData.levelDxMap = a_levDxMap;
+    m_RobinBCData.Re = a_multiplier;
+    m_RobinBCData.dxVect = a_dxVect;
+  }
+
+protected:
+
+  RobinBCData m_RobinBCData;
 };
 
 #include "NamespaceFooter.H"

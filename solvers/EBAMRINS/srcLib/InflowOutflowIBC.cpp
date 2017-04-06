@@ -42,6 +42,7 @@ InflowOutflowIBC::getVelBC(int a_icomp) const
                                            m_doSlipWallsHi,
                                            m_doSlipWallsLo,
                                            m_adjointSolver,
+                                           &m_RobinBCData,
                                            m_poiseInflowFunc,
                                            m_doWomersleyInflow));
   return helmBC;
@@ -74,6 +75,7 @@ getPressBC() const
                                                  m_doSlipWallsHi,
                                                  m_doSlipWallsLo,
                                                  m_adjointSolver,
+                                                 &m_RobinBCData,
                                                  m_poiseInflowFunc,
                                                  m_doWomersleyInflow));
   return poisBC;
@@ -93,6 +95,7 @@ getVelAdvectBC(int a_velComp) const
                                           m_doSlipWallsHi,
                                           m_doSlipWallsLo,
                                           m_adjointSolver,
+                                          &m_RobinBCData,
                                           m_poiseInflowFunc,
                                           m_doWomersleyInflow));
   return retval;
@@ -119,6 +122,7 @@ getMACVelBC() const
                                                  m_doSlipWallsHi,
                                                  m_doSlipWallsLo,
                                                  m_adjointSolver,
+                                                 &m_RobinBCData,
                                                  m_poiseInflowFunc,
                                                  m_doWomersleyInflow));
   return poisBC;

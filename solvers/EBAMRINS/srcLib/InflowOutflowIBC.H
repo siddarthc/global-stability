@@ -28,6 +28,7 @@
 #include "ExtrapAdvectBC.H"
 #include "PoiseuilleInflowBCValue.H"
 
+#include "RobinBCDataHolder.H"
 #include "InflowOutflowParams.H"
 #include "NamespaceHeader.H"
 
@@ -73,6 +74,8 @@ public:
     m_params = a_params;
 
     m_adjointSolver = a_adjointSolver;
+
+//    m_RobinBCData = NULL;
   }
 
   ///
@@ -211,6 +214,13 @@ public:
     m_isPoiseDefined = true;
   }
 
+/*
+  void setRobinBCData(RobinBCData& a_RobinBCData)
+  {
+    m_RobinBCData = &a_RobinBCData;
+  }
+*/
+
 // protected:
   int     m_flowDir;
   Real    m_inflowVel;
@@ -224,6 +234,8 @@ public:
   InflowOutflowParams m_params;
 
   bool m_adjointSolver;
+
+//  RobinBCData* m_RobinBCData;
 
   mutable bool    m_isPoiseDefined;
   mutable RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;

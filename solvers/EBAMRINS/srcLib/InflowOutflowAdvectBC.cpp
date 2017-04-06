@@ -160,7 +160,26 @@ fluxBC(EBFluxFAB&            a_primGdnv,
         } // end !adjointSolver
         else  // adjointSolver
         {
-          velComp = 0.; // homogeneous Dirichlet
+          if (!isOutflow)
+          {
+            velComp = 0.; // homogeneous Dirichlet
+          }
+          else
+          {
+            // set Ubase.n*vel + 1/Re * dvel/dn = 0
+            CH_assert(m_RobinBCData != NULL);
+            // dvel/dn = primExtrap - primCenter
+            int lev = (*m_RobinBCData).levelDxMap.find(m_dx[0])->second;
+            Real baseDataVal = (*((*(*m_RobinBCData).dataPtr)[lev]))[a_dit][a_dir](face, 0); 
+            baseDataVal *= -1.*(*m_RobinBCData).Re;
+            Real factor = baseDataVal/(baseDataVal - isign*8./(3.*m_dx[a_dir]));
+//            velComp = (a_primExtrap(vof, 0) - a_primCenter(vof, 0))/(-1.*baseDataVal*(*m_RobinBCData).Re*0.5*m_dx[0]);
+
+            RealVect prob_lo = RealVect::Zero;
+            RobinPoissonBCFunctions::getHigherOrderFaceFlux(velComp, vof, 0, a_primCenter, prob_lo, m_dx, a_dir, a_side, a_dit, a_time, false, *m_RobinBCData);
+            // velComp comtained dvel/dn = C*velOutflow
+            velComp /= factor;
+          }
         }
         a_primGdnv[a_dir](face, 0) = velComp;
       }

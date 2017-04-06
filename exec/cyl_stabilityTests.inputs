@@ -106,9 +106,9 @@ sort_EV = LM
 
 do_linearized_INS = true
 #check InflowOutflowIBCFactory to make sure m_adjointSolver = a_adjointSolver
-do_adjoint = false
+do_adjoint = true
 do_first_order_fre_deriv = false
-plot_snapshots = false
+plot_snapshots = true
 
 plot_num_EVComps = 2
 plot_EVComps = 0 1 2 3 4

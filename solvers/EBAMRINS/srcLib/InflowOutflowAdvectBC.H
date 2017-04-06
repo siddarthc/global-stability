@@ -22,6 +22,8 @@
 #include "PoiseuilleInflowBCValue.H"
 #include "InflowOutflowParams.H"
 
+#include "RobinBCDataHolder.H"
+
 #include "NamespaceHeader.H"
 
 ///for velocity boundary conditions
@@ -45,6 +47,7 @@ public:
                         IntVect a_doSlipWallsHi,
                         IntVect a_doSlipWallsLo,
                         bool a_adjointSolver,
+                        const RobinBCData* a_RobinBCData = NULL,
                         RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                         bool a_doWomersleyInflow=false)
   {
@@ -58,6 +61,7 @@ public:
     m_poiseInflowFunc = a_poiseBCValue;
     m_params = a_params;
     m_adjointSolver = a_adjointSolver;
+    m_RobinBCData = a_RobinBCData;
     m_isDefined = false;
   }
 
@@ -153,6 +157,8 @@ protected:
 
   bool m_adjointSolver;
 
+  const RobinBCData* m_RobinBCData;
+
   //weak construction is bad but I will allow copy construction and assignment
   //because there are no pointers in the internal data
   InflowOutflowAdvectBC()
@@ -183,6 +189,7 @@ public:
                                IntVect a_doSlipWallsHi,
                                IntVect a_doSlipWallsLo,
                                bool a_adjointSolver,
+                               const RobinBCData* a_RobinBCData = NULL,
                                RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
                                bool a_doWomersleyInflow = false)
   {
@@ -196,6 +203,7 @@ public:
     m_doWomersleyInflow = a_doWomersleyInflow;
     m_params = a_params;
     m_adjointSolver = a_adjointSolver;
+    m_RobinBCData = a_RobinBCData;
   }
 
   ///
@@ -209,6 +217,7 @@ public:
                                                                m_doSlipWallsHi,
                                                                m_doSlipWallsLo,
                                                                m_adjointSolver,
+                                                               m_RobinBCData,
                                                                m_poiseInflowFunc,
                                                                m_doWomersleyInflow);
     return static_cast<EBPhysIBC*>(retval);
@@ -229,6 +238,8 @@ protected:
   RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
 
   bool m_adjointSolver;
+
+  const RobinBCData* m_RobinBCData;
 
   //weak construction is bad but I will allow copy construction and assignment
   InflowOutflowAdvectBCFactory()
