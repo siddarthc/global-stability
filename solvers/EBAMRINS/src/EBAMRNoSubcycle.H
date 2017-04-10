@@ -89,6 +89,12 @@ public:
     m_smallestFilter = 2.0;
     m_largestFilter  = 2.0;
     m_controlCoef    = 1.0;
+
+    // for PI control
+    m_doPIControl = false;
+    m_integralCoef.resize(1);
+    m_integralCoef[0] = 0.;
+
     m_plotSFD        = false;
 
   }
@@ -190,6 +196,10 @@ public:
   Real                                m_smallestFilter;
   Real                                m_largestFilter;
   Real                                m_controlCoef; 
+
+  // for PI control
+  Vector<Real>                        m_integralCoef;
+  bool                                m_doPIControl;
 };
 
 
@@ -438,13 +448,9 @@ protected:
   {
   }
 
-  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir)
-  {
-  }
+  virtual void computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir);
 
-  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo)
-  {
-  }
+  virtual void computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo);
 
   virtual void storePredictedVelocity(const Vector<LevelData<EBFluxFAB>* > &                      a_macVelocity,
                                       const Vector<LayoutData< Vector< BaseIVFAB<Real> * > >* > & a_coveredVelocityLo,

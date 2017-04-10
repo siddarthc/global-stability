@@ -525,6 +525,12 @@ getAMRINSParameters(AMRParameters&   a_params,
           ppebamr.get("largest_filter", a_params.m_largestFilter);
         }
       ppebamr.get("control_coef", a_params.m_controlCoef);
+      // for PI control
+      ppebamr.get("do_PIControl", a_params.m_doPIControl);
+      if (a_params.m_doPIControl)
+      {
+        ppebamr.getarr("integral_coef", a_params.m_integralCoef, 0, a_params.m_nFilters);
+      }
     }
 }
 

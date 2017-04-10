@@ -20,6 +20,7 @@
 ChomboSFDInterface::ChomboSFDInterface()
 {
   m_isDefined = false;
+  m_doPIControl = false;
 }
 /*********/
 ChomboSFDInterface::~ChomboSFDInterface()
@@ -28,6 +29,9 @@ ChomboSFDInterface::~ChomboSFDInterface()
   for (int i = 0; i< m_qBar.size(); i++)
     {
       if (m_qBar[i] != NULL) delete m_qBar[i];
+      // for PI control
+      if (m_qdiffOld[i] != NULL) delete m_qdiffOld[i];
+      if (m_qdiffNew[i] != NULL) delete m_qdiffNew[i];
     }
 
 }
@@ -37,11 +41,24 @@ define(int    a_nFilters,
        double a_smallestFilter,
        double a_largestFilter,
        double a_controlCoef,
-       int    a_nComp)
+       int    a_nComp,
+       bool   a_doPIControl,
+       Vector<Real> a_integralCoef)
 {
   m_qBar.resize(a_nFilters);
   m_SFDOp.define(a_nFilters, a_smallestFilter, a_largestFilter, a_controlCoef);
   m_nComp = a_nComp;
+
+  // for PI control
+  m_integralCoef = a_integralCoef;
+  m_doPIControl = a_doPIControl;
+  if (m_doPIControl) 
+  {
+    m_qdiffOld.resize(a_nFilters);
+    m_qdiffNew.resize(a_nFilters);
+  }
+  
+
   m_isDefined = true;
 }
 /*********/
@@ -61,6 +78,17 @@ initialize(const LevelData<EBCellFAB>& a_data,
       m_qBar[i] = new LevelData<EBCellFAB>(a_eblg.getDBL(), m_nComp, ivGhost, fact);
       m_qBar[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
       a_data.copyTo(interv, *(m_qBar[i]), interv);
+
+      if (m_doPIControl)
+      {
+        m_qdiffOld[i] = new LevelData<EBCellFAB>();
+        m_qdiffNew[i] = new LevelData<EBCellFAB>();
+        m_qdiffOld[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
+        m_qdiffNew[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
+
+        EBLevelDataOps::setToZero(*m_qdiffOld[i]);
+        EBLevelDataOps::setToZero(*m_qdiffNew[i]);
+      }
     }
 }
 /*********/
@@ -82,6 +110,12 @@ doEBCoarseAverage(ChomboSFDInterface* a_finerLevel,
     for (int i = 0; i < m_qBar.size(); i++)
       {
         a_ebCoarseAverage.average(*(m_qBar[i]), *((a_finerLevel->m_qBar)[i]), interv);
+
+        if (m_doPIControl)
+        {
+          a_ebCoarseAverage.average(*(m_qdiffOld[i]), *((a_finerLevel->m_qBar)[i]), interv);
+          a_ebCoarseAverage.average(*(m_qdiffNew[i]), *((a_finerLevel->m_qBar)[i]), interv);
+        }
       }
   }
 }
@@ -100,6 +134,18 @@ operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg)
   base_copier_ cast_copier = static_cast<base_copier_>(&ChomboSFDOpFunctions::copierFunc);
  
   m_SFDOp(a_q, m_qBar.stdVector(), a_dt, cast_aXbY, cast_copier, cast_func); 
+
+  // for PI control
+  // update qbarNew
+  if (m_doPIControl)
+  {
+    Interval interv(0, m_nComp-1);
+    for (int i = 0; i < m_qBar.size(); i++)
+    {
+      EBLevelDataOps::setToZero(*m_qdiffNew[i]);
+      EBLevelDataOps::axby(*m_qdiffNew[i], a_q, *m_qBar[i], 1., -1.);
+    }
+  }
 }
 /*********/
 void ChomboSFDInterface::
@@ -126,6 +172,31 @@ regrid(LevelData<EBCellFAB>& a_tempFAB,
         }
 
       a_tempFAB.copyTo(interv, *(m_qBar[i]), interv);
+
+      // regrid PI control stuff
+      if (m_doPIControl)
+      {
+        m_qdiffOld[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        if (a_coarLevel != NULL)
+        {
+          a_interp.interpolate(*(m_qdiffOld[i]), *((a_coarLevel->m_qdiffOld)[i]), interv);
+        }
+
+        a_tempFAB.copyTo(interv, *(m_qdiffOld[i]), interv);
+
+        m_qdiffNew[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffNew[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        if (a_coarLevel != NULL)
+        {
+          a_interp.interpolate(*(m_qdiffNew[i]), *((a_coarLevel->m_qdiffNew)[i]), interv);
+        }
+
+        a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
+      }
+
     }
 }
 /*********/
@@ -231,10 +302,16 @@ appendDataToFAB(LevelData<FArrayBox>&       a_result,
     }
 }
 /*********/
-Vector<LevelData<EBCellFAB>* >* ChomboSFDInterface::
-getData()
+const Vector<LevelData<EBCellFAB>* >* ChomboSFDInterface::
+getData() const
 {
   return &m_qBar;
+}
+/*********/
+int ChomboSFDInterface::
+getnFilters() const
+{
+  return m_qBar.size();
 }
 /*********/
 bool ChomboSFDInterface::
@@ -267,6 +344,64 @@ convergedToSteadyState(const LevelData<EBCellFAB>& a_data, EBLevelGrid& a_eblg)
   return (maxdiff < eps);
 }
 /*********/
+void ChomboSFDInterface::
+getNavierStokesSource(LevelData<EBCellFAB>& a_source, Real a_dt, bool a_updateOldToNew)
+{
+  EBLevelDataOps::setToZero(a_source);
+  if (m_doPIControl)
+  {
+    CH_assert(a_source.nComp() == m_qdiffOld[0]->nComp());
+
+    // set source = -sum(integralCoef*integral(qdiff))
+    //    integral(qdiff) from t1 to t2 =  a_dt*0.5*(qdiffNew + qdiffOld)
+    for (int i = 0; i < m_qBar.size(); i++)
+    {
+      EBLevelDataOps::incr(a_source, *m_qdiffNew[i], -m_integralCoef[i]*a_dt/2.);
+      EBLevelDataOps::incr(a_source, *m_qdiffOld[i], -m_integralCoef[i]*a_dt/2.);
+    }
+
+    if (a_updateOldToNew)
+    {
+      for (int i = 0; i < m_qBar.size(); i++)
+      {
+        EBLevelDataOps::setToZero(*m_qdiffOld[i]);
+        EBLevelDataOps::incr(*m_qdiffOld[i], *m_qdiffNew[i], 1.);
+      }
+    }
+  }
+}
+/*********/
+void ChomboSFDInterface::
+getNavierStokesSource(LevelData<EBCellFAB>& a_source, const int& a_startSrcComp, const int& a_startSFDComp, const int& a_nComp, Real a_dt, bool a_updateOldToNew)
+{
+  CH_assert(a_source.nComp() == 1);
+  EBLevelDataOps::setToZero(a_source);
+  if (m_doPIControl)
+  {
+    // set source = -sum(integralCoef*integral(qdiff))
+    //    integral(qdiff) from t1 to t2 =  a_dt*0.5*(qdiffNew + qdiffOld)
+    for (int i = 0; i < m_qBar.size(); i++)
+    {
+      for (DataIterator dit = a_source.dataIterator(); dit.ok(); ++dit)
+      {
+        DataIndex d = dit();
+        a_source[d].plus((*m_qdiffNew[i])[d], a_startSFDComp, a_startSrcComp, a_nComp);
+        a_source[d].plus((*m_qdiffOld[i])[d], a_startSFDComp, a_startSrcComp, a_nComp);
+        a_source[d].mult(-m_integralCoef[i]*a_dt/2.);
+      }
+    }
+
+    if (a_updateOldToNew)
+    {
+      for (int i = 0; i < m_qBar.size(); i++)
+      {
+        EBLevelDataOps::setToZero(*m_qdiffOld[i]);
+        EBLevelDataOps::incr(*m_qdiffOld[i], *m_qdiffNew[i], 1.);
+      }
+    }
+  }
+}
+/*********/
 #ifdef CH_USE_HDF5
 
 /*********/
@@ -282,8 +417,17 @@ writeCheckpointLevel(HDF5Handle& a_handle) const
 void ChomboSFDInterface::
 writeCheckpointLevel(HDF5Handle& a_handle, int a_filterIndex) const
 {
-  string str = "qBar"+SSTR(a_filterIndex);
-  write(a_handle, *(m_qBar[a_filterIndex]), str);
+  string str1 = "qBar"+SSTR(a_filterIndex);
+  write(a_handle, *(m_qBar[a_filterIndex]), str1);
+
+  if (m_doPIControl)
+  {
+    string str2 = "qdiffOld"+SSTR(a_filterIndex);
+    write(a_handle, *(m_qdiffOld[a_filterIndex]), str2);
+
+    string str3 = "qdiffNew"+SSTR(a_filterIndex);
+    write(a_handle, *(m_qdiffNew[a_filterIndex]), str3);
+  }
 }
 /*********/
 void ChomboSFDInterface::
@@ -308,15 +452,42 @@ readCheckpointLevel(HDF5Handle& a_handle, int a_filterIndex, EBLevelGrid& a_eblg
 
   m_qBar[a_filterIndex]->define(a_eblg.getDBL(), m_nComp, ivGhost, factoryNew);
 
-  string str = "qBar"+SSTR(a_filterIndex);
+  if (m_doPIControl)
+  {
+    m_qdiffOld[a_filterIndex] = new LevelData<EBCellFAB>();
+    m_qdiffNew[a_filterIndex] = new LevelData<EBCellFAB>();
+
+    m_qdiffOld[a_filterIndex]->define(a_eblg.getDBL(), m_nComp, ivGhost, factoryNew);
+    m_qdiffNew[a_filterIndex]->define(a_eblg.getDBL(), m_nComp, ivGhost, factoryNew);
+  }
+
+  string str1 = "qBar"+SSTR(a_filterIndex);
 
   // the false says to not redefine data
-  int dataStatus = read<EBCellFAB>(a_handle, *(m_qBar[a_filterIndex]), str, a_eblg.getDBL(), Interval(), false);
+  int dataStatus = read<EBCellFAB>(a_handle, *(m_qBar[a_filterIndex]), str1, a_eblg.getDBL(), Interval(), false);
 
   if ((dataStatus != 0))
     {
       MayDay::Error("file does not contain qBar data");
     }
+
+  if (m_doPIControl)
+  {
+    string str2 = "qdiffOld"+SSTR(a_filterIndex);
+    string str3 = "qdiffNew"+SSTR(a_filterIndex);
+
+    dataStatus = read<EBCellFAB>(a_handle, *(m_qdiffOld[a_filterIndex]), str2, a_eblg.getDBL(), Interval(), false);
+    if ((dataStatus != 0))
+    {
+      MayDay::Error("file does not contain qdiffOld data");
+    }
+
+    dataStatus = read<EBCellFAB>(a_handle, *(m_qdiffNew[a_filterIndex]), str3, a_eblg.getDBL(), Interval(), false);
+    if ((dataStatus != 0))
+    {
+      MayDay::Error("file does not contain qdiffNew data");
+    }
+  }
 }
 /*********/
 void ChomboSFDInterface::

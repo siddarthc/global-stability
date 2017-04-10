@@ -31,7 +31,9 @@ public:
               double a_smallestFilter,
               double a_largestFilter,
               double a_controlCoef,
-              int    a_nComp);
+              int    a_nComp,
+              bool   a_doPIControl = false,
+              Vector<Real> a_integralCoef = Vector<Real>());
 
   void initialize(const LevelData<EBCellFAB>& a_data,
                   EBLevelGrid&          a_eblg);
@@ -62,11 +64,17 @@ public:
                                int                         a_startIndex, 
                                const EBLevelGrid&                a_eblg) const;
 
-  Vector<LevelData<EBCellFAB>* >* getData();
+  const Vector<LevelData<EBCellFAB>* >* getData() const;
 
   bool convergedToSteadyState(const LevelData<EBCellFAB>& a_data, EBLevelGrid& a_eblg);
 
   int getnComp() const;
+
+  int getnFilters() const;
+
+  virtual void getNavierStokesSource(LevelData<EBCellFAB>& a_source, Real a_dt, bool a_updateOldToNew = true);
+
+  virtual void getNavierStokesSource(LevelData<EBCellFAB>& a_source, const int& a_startSrccomp, const int& a_startSFDComp, const int& a_nComp, Real a_dt, bool a_updateOldToNew = false);
 
 // HDF5 stuff
 #ifdef CH_USE_HDF5
@@ -96,6 +104,13 @@ protected:
   Vector<LevelData<EBCellFAB>* > m_qBar;
 
   SFDOp<LevelData<EBCellFAB> > m_SFDOp;
+
+  // for PI control
+  Vector<LevelData<EBCellFAB>* > m_qdiffOld;
+  Vector<LevelData<EBCellFAB>* > m_qdiffNew;
+
+  Vector<Real> m_integralCoef;
+  bool m_doPIControl;
 
 };
 

@@ -1,13 +1,13 @@
 #!/bin/bash
                           # Use Bash Shell
 
-#SBATCH -J Seval          #Job name
-#SBATCH -o Seval.%j.out   # stdout; %j expands jobid
-#SBATCH -e Seval.%j.err   # stderr; skip to combine stdout and stderr
+#SBATCH -J SFD          #Job name
+#SBATCH -o SFD.%j.out   # stdout; %j expands jobid
+#SBATCH -e SFD.%j.err   # stderr; skip to combine stdout and stderr
 #SBATCH -p normal        # queue
 #SBATCH -N 11              # Number of nodes, not cores (16 cores/node)
 #SBATCH -n 264             # Total number of MPI tasks (if omitted, n=N)
-#SBATCH -t 00:42:00       # max time
+#SBATCH -t 01:42:00       # max time
 
 #SBATCH --mail-user=siddarth.chintamani@mavs.uta.edu
 #SBATCH --mail-type=ALL

@@ -42,6 +42,9 @@
 #include "memusage.H"
 #include "memtrack.H"
 
+#include "SFDUtils.H"
+#include <fstream>
+
 #include "NamespaceHeader.H"
 
 extern Real g_simulationTime;
@@ -1648,11 +1651,29 @@ EBAMRNoSubcycle::postTimeStep()
 
   if (m_params.m_doSFD)
   {
+/*
     for (int ilev = 0; ilev <= m_finestLevel; ilev++)
       {
         pout() << "calculating residual on level " << ilev << endl;
         bool isConverged = m_SFDOp[ilev].convergedToSteadyState(*m_velo[ilev], m_eblg[ilev]);
       }
+*/
+    Real L2Norm, LinfNorm;
+    const int nFilters = m_SFDOp[0].getnFilters();
+    for (int iFilter = 0; iFilter < nFilters; iFilter++)
+    {
+      SFDUtils::computeLinfNorm(LinfNorm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+      SFDUtils::computeL2Norm(L2Norm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+      pout() << "||q-qBar||inf for filter " << iFilter << " = " << LinfNorm << endl;
+      pout() << "||q-qBar||2 for filter " << iFilter << " = " << L2Norm << endl;
+      if (procID() == 0)
+      {
+        std::ofstream outfile;
+        string fileName = "norm_filter_"+SSTR(iFilter)+".his";
+        outfile.open(fileName, std::ios_base::app);
+        outfile << m_curStep << "\t" << m_time << "\t" << LinfNorm << "\t" << L2Norm << endl;
+      }
+    }
   }
 }
 /*****************/
@@ -1720,7 +1741,7 @@ defineSFDOp(int a_startLevel)
     }
   for (int ilev = startLevel; ilev <= m_finestLevel; ilev++)
     {
-      m_SFDOp[ilev].define(m_params.m_nFilters, m_params.m_smallestFilter, m_params.m_largestFilter, m_params.m_controlCoef, m_velo[ilev]->nComp());
+      m_SFDOp[ilev].define(m_params.m_nFilters, m_params.m_smallestFilter, m_params.m_largestFilter, m_params.m_controlCoef, m_velo[ilev]->nComp(), m_params.m_doPIControl, m_params.m_integralCoef);
     }
 }
 /*****************/
@@ -4158,6 +4179,36 @@ concludeStabilityRun(const std::string* a_fileName, bool a_writeCheckpoint)
   }
 
 #endif
+}
+/*********/
+void EBAMRNoSubcycle::
+computeExtraSourceForPredictor(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo, const int& a_dir)
+{
+  if (m_params.m_doSFD)
+  {
+    bool updateOldSFDSource = false; 
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      m_SFDOp[ilev].getNavierStokesSource(*a_source[ilev], 0, a_dir, 1, m_dt, updateOldSFDSource);
+    }
+  
+    averageDown(a_source);
+  }  
+}
+/*********/
+void EBAMRNoSubcycle::
+computeExtraSourceForCorrector(Vector<LevelData<EBCellFAB>*> & a_source, const Vector<LevelData<EBCellFAB>* >& a_velo)
+{
+  if (m_params.m_doSFD)
+  {
+    bool updateOldSFDSource = true;
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      m_SFDOp[ilev].getNavierStokesSource(*a_source[ilev], m_dt, updateOldSFDSource);
+    }
+  }
+
+  averageDown(a_source);
 }
 /*********/
 
