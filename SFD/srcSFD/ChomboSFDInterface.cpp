@@ -113,8 +113,8 @@ doEBCoarseAverage(ChomboSFDInterface* a_finerLevel,
 
         if (m_doPIControl)
         {
-          a_ebCoarseAverage.average(*(m_qdiffOld[i]), *((a_finerLevel->m_qBar)[i]), interv);
-          a_ebCoarseAverage.average(*(m_qdiffNew[i]), *((a_finerLevel->m_qBar)[i]), interv);
+          a_ebCoarseAverage.average(*(m_qdiffOld[i]), *((a_finerLevel->m_qdiffOld)[i]), interv);
+          a_ebCoarseAverage.average(*(m_qdiffNew[i]), *((a_finerLevel->m_qdiffNew)[i]), interv);
         }
       }
   }
