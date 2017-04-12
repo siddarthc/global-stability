@@ -9,8 +9,8 @@
 #endif
 
 
-#ifndef _INFLOWOUTFLOWIBC_H_
-#define _INFLOWOUTFLOWIBC_H_
+#ifndef _COUNTERJETIBC_H_
+#define _COUNTERJETIBC_H_
 
 #include "EBCellFAB.H"
 #include "EBISLayout.H"
@@ -27,56 +27,85 @@
 #include "DirichletPoissonEBBC.H"
 #include "ExtrapAdvectBC.H"
 #include "PoiseuilleInflowBCValue.H"
-
-#include "InflowOutflowParams.H"
-#include "NamespaceHeader.H"
+#include "counterJetF_F.H"
 
 ///
 /**
    This class is meant to be a server for initial boundary conditions
    for all the various stages of BCG INS.
 */
-class InflowOutflowIBC: public EBIBC
+class counterJetIBC: public EBIBC
 {
 public:
   ///
   /**
      Create Poiseuille flow in a tube
   */
-  InflowOutflowIBC(int a_flowDir,
-                   Real a_inflowVel,
+  counterJetIBC(int a_flowDir,
+                   bool a_doJet2,
+                   Real a_jet1inflowVel,
+                   Real a_jet2inflowVel,
                    int a_orderEBBC,
-                   InflowOutflowParams a_params,
+                   RealVect a_jet2TubeOrigin,
+                   RealVect a_jet2TubeEnd,
                    IntVect a_doSlipWallsHi,
                    IntVect a_doSlipWallsLo,
                    bool a_adjointSolver,
-                   bool a_doPoiseInflow,
+                   bool a_doJet1PoiseInflow,
+                   bool a_doJet2PoiseInflow,
                    bool a_initPoiseData = false,
-                   RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
-                   bool a_doWomersleyInflow = false)
+                   RefCountedPtr<PoiseuilleInflowBCValue> a_jet1PoiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
+                   RefCountedPtr<PoiseuilleInflowBCValue> a_jet2PoiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> ())
   {
-    m_flowDir       = a_flowDir;
-    m_inflowVel     = a_inflowVel;
-    m_orderEBBC     = a_orderEBBC;
-    m_doSlipWallsHi = a_doSlipWallsHi;
-    m_doSlipWallsLo = a_doSlipWallsLo;
-    m_doPoiseInflow = a_doPoiseInflow;
-    m_initPoiseData = a_initPoiseData;
-    if (m_initPoiseData)
-    {
-      CH_assert(m_doPoiseInflow);
-    }
-    m_poiseInflowFunc = a_poiseBCValue;
-    m_isPoiseDefined = false;
-    m_doWomersleyInflow = a_doWomersleyInflow;
-
-    m_params = a_params;
+    m_flowDir           = a_flowDir;
+    m_doJet2            = a_doJet2;
+    m_jet1inflowVel     = a_jet1inflowVel;
+    m_jet2inflowVel     = a_jet2inflowVel;
+    m_orderEBBC         = a_orderEBBC;
+    m_doSlipWallsHi     = a_doSlipWallsHi;
+    m_doSlipWallsLo     = a_doSlipWallsLo;
+    m_doJet1PoiseInflow = a_doJet1PoiseInflow;
+    m_doJet2PoiseInflow = a_doJet2PoiseInflow;
+    m_initPoiseData     = a_initPoiseData;
 
     m_adjointSolver = a_adjointSolver;
+
+/*
+    if (m_initPoiseData)
+    {
+      CH_assert(m_doJet1PoiseInflow);
+    }
+*/
+    m_jet1PoiseInflowFunc = a_jet1PoiseBCValue;
+    m_jet2PoiseInflowFunc = a_jet2PoiseBCValue;
+    m_jet2TubeOrigin = a_jet2TubeOrigin;
+    m_jet2TubeEnd = a_jet2TubeEnd;
+ 
+    Real jet2Rad = m_jet2PoiseInflowFunc->getTubeRadius();
+    Real jet2maxVel = m_jet2PoiseInflowFunc->getMaxVel(); 
+    Real viscosity = m_jet2PoiseInflowFunc->getViscosity();
+    Vector<Real> jet2TubeOrig(CH_SPACEDIM), jet2TubeEnd(CH_SPACEDIM);
+    for (int i = 0; i < CH_SPACEDIM; i++)
+      {
+        jet2TubeOrig[i] = m_jet2TubeOrigin[i];
+        jet2TubeEnd[i] = m_jet2TubeEnd[i];
+      }
+
+    if (m_doJet2 && m_initPoiseData)
+      {
+        FORT_SETJET2PARAMS(CHF_CONST_INT(m_flowDir),
+                           CHF_CONST_REAL(jet2maxVel),
+                           CHF_CONST_REAL(jet2Rad),
+                           CHF_CONST_REAL(viscosity),
+                           CHF_CONST_VR(jet2TubeOrig),
+                           CHF_CONST_VR(jet2TubeEnd));
+
+        m_isFortranCommonSet = true;
+      }
   }
 
   ///
-  virtual ~InflowOutflowIBC()
+  virtual ~counterJetIBC()
   {;}
 
   ///
@@ -173,10 +202,10 @@ public:
 
   virtual RefCountedPtr<BaseEBBCFactory> getPressureEBBC() const ;
 
+/*
   void poiseuilleDefine(const ProblemDomain&  a_domain,
                         const RealVect&       a_dx) const
   {
-/*
     CH_assert(SpaceDim==2);
     RealVect poiseuilleAxis = BASISREALV(m_flowDir);
     int tanDir=1;
@@ -203,35 +232,38 @@ public:
       }
     else if (m_doSlipWallsHi[tanDir]==m_doSlipWallsLo[tanDir] && m_doSlipWallsLo[tanDir]==1)
       {
-        MayDay::Error("InflowOutflowIBC.H -- slip walls on both hi and lo sides for Poiseuille...check inputs");
+        MayDay::Error("counterJetIBC.H -- slip walls on both hi and lo sides for Poiseuille...check inputs");
       }
     Real maxVelFactor = 1.5;//planar
 //     Real maxVelFactor = 2.0;//axisymmetric tube
     m_poiseInflowFunc = RefCountedPtr<PoiseuilleInflowBCValue>(new PoiseuilleInflowBCValue(poiseuilleCenter, poiseuilleAxis, poiseuilleRadius, maxVelFactor*m_inflowVel, m_flowDir));
 
     m_isPoiseDefined = true;
-*/
   }
+*/
 
 // protected:
   int     m_flowDir;
-  Real    m_inflowVel;
+  bool    m_doJet2;
+  Real    m_jet1inflowVel;
+  Real    m_jet2inflowVel;
   int     m_orderEBBC;
   IntVect m_doSlipWallsHi;
   IntVect m_doSlipWallsLo;
-  bool    m_doPoiseInflow;
+  RealVect m_jet2TubeOrigin;
+  RealVect m_jet2TubeEnd;
+  bool    m_doJet1PoiseInflow;
+  bool    m_doJet2PoiseInflow;
   bool    m_initPoiseData;
   bool    m_doWomersleyInflow;
-
-  InflowOutflowParams m_params;
+  bool    m_isFortranCommonSet;
+  mutable RefCountedPtr<PoiseuilleInflowBCValue> m_jet1PoiseInflowFunc;
+  mutable RefCountedPtr<PoiseuilleInflowBCValue> m_jet2PoiseInflowFunc;
 
   bool m_adjointSolver;
 
-  mutable bool    m_isPoiseDefined;
-  mutable RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
-
   /// weak construction is bad, mkay?
-  InflowOutflowIBC()
+  counterJetIBC()
   {
     MayDay::Error("invalid operator");
   }
@@ -240,45 +272,48 @@ public:
 ///
 /**
  */
-class InflowOutflowIBCFactory: public EBIBCFactory
+class counterJetIBCFactory: public EBIBCFactory
 {
 public:
   ///
   /**
    */
-  InflowOutflowIBCFactory(int a_flowDir,
-                          Real a_inflowVel,
-                          int a_orderEBBC,
-                          InflowOutflowParams a_params,
-                          IntVect a_doSlipWallsHi=IntVect::Zero,
-                          IntVect a_doSlipWallsLo=IntVect::Zero,
-                          bool a_adjointSolver=false,
-                          bool a_doPoiseInflow=false,
-                          bool a_initPoiseData=false,
-                          RefCountedPtr<PoiseuilleInflowBCValue> a_poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
-                          // const RealVect& a_centerPt,
-                          // const RealVect& a_tubeAxis,
-                          // const Real&     a_tubeRadius,
-                          // const Real&     a_maxVel,
-                          // const int&      a_velComp,
-                          bool a_doWomersleyInflow=false)
+  counterJetIBCFactory(int a_flowDir,
+                       bool a_doJet2,
+                       Real a_jet1inflowVel,
+                       Real a_jet2inflowVel,
+                       int a_orderEBBC,
+                       RealVect a_jet2TubeOrigin,
+                       RealVect a_jet2TubeEnd,
+                       IntVect a_doSlipWallsHi=IntVect::Zero,
+                       IntVect a_doSlipWallsLo=IntVect::Zero,
+                       bool a_adjointSolver = false,
+                       bool a_doJet1PoiseInflow=false,
+                       bool a_doJet2PoiseInflow=false,
+                       bool a_initPoiseData=false,
+                       RefCountedPtr<PoiseuilleInflowBCValue> a_jet1PoiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> (),
+                       RefCountedPtr<PoiseuilleInflowBCValue> a_jet2PoiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue> ())
   {
-    m_flowDir       = a_flowDir;
-    m_inflowVel     = a_inflowVel;
-    m_orderEBBC     = a_orderEBBC;
-    m_doSlipWallsHi = a_doSlipWallsHi;
-    m_doSlipWallsLo = a_doSlipWallsLo;
-    m_doPoiseInflow = a_doPoiseInflow;
-    m_initPoiseData = a_initPoiseData;
-    m_poiseInflowFunc = a_poiseBCValue;
-    m_doWomersleyInflow = a_doWomersleyInflow;
+    m_flowDir             = a_flowDir;
+    m_doJet2              = a_doJet2;
+    m_jet1inflowVel       = a_jet1inflowVel;
+    m_jet2inflowVel       = a_jet2inflowVel;
+    m_orderEBBC           = a_orderEBBC;
+    m_doSlipWallsHi       = a_doSlipWallsHi;
+    m_doSlipWallsLo       = a_doSlipWallsLo;
+    m_doJet1PoiseInflow   = a_doJet1PoiseInflow;
+    m_doJet2PoiseInflow   = a_doJet2PoiseInflow;
+    m_initPoiseData       = a_initPoiseData;
+    m_jet1PoiseInflowFunc = a_jet1PoiseBCValue;
+    m_jet2PoiseInflowFunc = a_jet2PoiseBCValue;
+    m_jet2TubeOrigin      = a_jet2TubeOrigin;
+    m_jet2TubeEnd         = a_jet2TubeEnd;
 
-    m_params = a_params;
     m_adjointSolver = a_adjointSolver;
   }
 
   ///
-  virtual ~InflowOutflowIBCFactory()
+  virtual ~counterJetIBCFactory()
   {
   }
 
@@ -287,42 +322,49 @@ public:
    */
   virtual EBIBC* create()  const
   {
-    InflowOutflowIBC* retDerived = new InflowOutflowIBC(m_flowDir,
-                                                        m_inflowVel,
+    counterJetIBC* retDerived = new counterJetIBC(m_flowDir,
+                                                        m_doJet2,
+                                                        m_jet1inflowVel,
+                                                        m_jet2inflowVel,
                                                         m_orderEBBC,
-                                                        m_params,
+                                                        m_jet2TubeOrigin,
+                                                        m_jet2TubeEnd,
                                                         m_doSlipWallsHi,
                                                         m_doSlipWallsLo,
                                                         m_adjointSolver,
-                                                        m_doPoiseInflow,
+                                                        m_doJet1PoiseInflow,
+                                                        m_doJet2PoiseInflow,
                                                         m_initPoiseData,
-                                                        m_poiseInflowFunc,
-                                                        m_doWomersleyInflow);
+                                                        m_jet1PoiseInflowFunc,
+                                                        m_jet2PoiseInflowFunc);    
     EBIBC* retBase =  (EBIBC*)retDerived;
     return retBase;
   }
 
 protected:
   int     m_flowDir;
-  Real    m_inflowVel;
+  bool    m_doJet2;
+  Real    m_jet1inflowVel;
+  Real    m_jet2inflowVel;
   int     m_orderEBBC;
   IntVect m_doSlipWallsHi;
   IntVect m_doSlipWallsLo;
-  bool    m_doPoiseInflow;
+  RealVect m_jet2TubeOrigin;
+  RealVect m_jet2TubeEnd;
+  bool    m_doJet1PoiseInflow;
+  bool    m_doJet2PoiseInflow;
   bool    m_initPoiseData;
-  bool    m_doWomersleyInflow;
-  RefCountedPtr<PoiseuilleInflowBCValue> m_poiseInflowFunc;
-
-  InflowOutflowParams m_params;
+  RefCountedPtr<PoiseuilleInflowBCValue> m_jet1PoiseInflowFunc;
+  RefCountedPtr<PoiseuilleInflowBCValue> m_jet2PoiseInflowFunc;
 
   bool m_adjointSolver;
 
   /// weak construction is bad but i will allow copy construction and assignment
-  InflowOutflowIBCFactory()
+  counterJetIBCFactory()
   {
     MayDay::Error("invalid operator");
   }
 };
 
-#include "NamespaceFooter.H"
+
 #endif

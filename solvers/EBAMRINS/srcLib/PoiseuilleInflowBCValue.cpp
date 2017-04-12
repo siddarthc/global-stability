@@ -23,7 +23,16 @@ getVel(const Real& a_radius) const
   Real tubeRadSq = m_tubeRadius*m_tubeRadius;
   //    V = (1-r^2/r^2_0)*V_0
   Real vectSize = (1.0- (radsq/tubeRadSq))*m_maxVel;
-  RealVect retval = m_tubeAxis*vectSize;
+  RealVect retval;
+  // SC: hardwiring this 
+  if (radsq <= tubeRadSq)
+    {
+      retval = m_tubeAxis*vectSize;
+    }
+  else 
+    { 
+      retval = RealVect::Zero;
+    }
   return retval;
 }
 /***/
@@ -32,9 +41,9 @@ PoiseuilleInflowBCValue::
 getGradP() const
 {
   CH_assert(SpaceDim==2);
-  //    dp/dx = -12*[mu]/R^2 * 2/3 u_max
+  //    dp/dx = -8*[nu]/R^2 * u_avg
   Real tubeRadSq = m_tubeRadius*m_tubeRadius;
-  Real vectSize = -(12./(4.*tubeRadSq))*(2./3.)*m_maxVel;
+  Real vectSize = -(8.0*m_viscosity/(tubeRadSq))*m_avgVel;
   RealVect retval = m_tubeAxis*vectSize;
   return retval;
 }
@@ -77,5 +86,32 @@ value(const RealVect& a_point, const RealVect& a_normal, const Real& a_time, con
   RealVect velocity = getVel(radius);
   return velocity[m_velComp];
 }
-
+/***/
+Real
+PoiseuilleInflowBCValue::
+getViscosity() const
+{
+  return m_viscosity;
+}
+/***/
+RealVect
+PoiseuilleInflowBCValue::
+getTubeCenter() const
+{
+  return m_centerPt;
+}
+/***/
+Real 
+PoiseuilleInflowBCValue::
+getMaxVel() const
+{
+  return m_maxVel;
+}
+/***/
+Real
+PoiseuilleInflowBCValue::
+getTubeRadius() const
+{
+  return m_tubeRadius;
+}
 #include "NamespaceFooter.H"

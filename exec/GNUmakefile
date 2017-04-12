@@ -10,7 +10,7 @@ LibNames = EBAMRTimeDependent EBAMRElliptic EBAMRTools Workshop EBTools AMREllip
 base_dir = .
 
 #compiling both INS and CNS gives compilation errors due to multiple definitions of InflowOutflowIBC
-src_dirs = ../libStability/ ../srcStability ../SFD/libSFD ../SFD/srcSFD ../solvers/EBAMRINS/src ../solvers/EBAMRINS/srcLib 
+src_dirs = ../libStability/ ../srcStability ../SFD/libSFD ../SFD/srcSFD ../SFD/SFDUtils ../solvers/EBAMRINS/src ../solvers/EBAMRINS/srcLib 
 #src_dirs = ../libStability/ ../srcStability ../SFD/libSFD ../SFD/srcSFD ../solvers/EBAMRCNS/src ../solvers/srcSolvers
 
 INPUT = ramp.2d.inputs

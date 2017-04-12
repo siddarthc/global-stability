@@ -35,6 +35,9 @@
 #include "InflowOutflowIBC.H"
 #include "InflowOutflowParams.H"
 #include "PoiseuilleInflowBCValue.H"
+
+#include "counterJetIBC.H"
+
 #include "EBFABView.H"
 #include <iostream>
 #include "memusage.H"
@@ -42,16 +45,11 @@
 
 #include "UsingNamespace.H"
 
-/***************/
-void ebamrieuler(const AMRParameters& a_params,
-                 const ProblemDomain& a_coarsestDomain)
+
+/**********/
+void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
 {
-
-  CH_TIMERS("ebamrins_driver");
-  CH_TIMER("define_ebamrnosubcycle_solver", t3);
-  CH_TIMER("init_ebamrnosubcycle_solver",   t4);
-  CH_TIMER("run ebamrnosubcycle_solver",   t5);
-
+  
   // read inputs
   ParmParse pp;
 
@@ -62,9 +60,6 @@ void ebamrieuler(const AMRParameters& a_params,
 
   Real inflowVel;
   pp.get("inflow_vel", inflowVel);
-
-  Real viscosity = 0.0;
-  pp.get("viscosity", viscosity);
 
   int idoSlipWalls;
   pp.get("do_slip_walls", idoSlipWalls);
@@ -95,6 +90,7 @@ void ebamrieuler(const AMRParameters& a_params,
   pout() << "Doing Poiseuille initialization" << endl;
 
   RefCountedPtr<PoiseuilleInflowBCValue> poiseBCValue;//make this BaseBCValue if also doing constant values
+/*
   if (doPoiseInflow)
     {
       pout() << "Doing Poiseuille inflow" << endl;
@@ -116,6 +112,7 @@ void ebamrieuler(const AMRParameters& a_params,
 
       poiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue>(new PoiseuilleInflowBCValue(centerPt,tubeAxis,tubeRadius,maxVel,flowDir));
     }
+*/
 
   bool doWomersleyInflow = false;
   pp.query("womersley_inflow", doWomersleyInflow);
@@ -123,21 +120,152 @@ void ebamrieuler(const AMRParameters& a_params,
   InflowOutflowParams ibc_params;
   ParseInflowOutflowParams(ibc_params);
 
-  InflowOutflowIBCFactory ibc(flowDir,
-                              inflowVel,
-                              orderEBBC,
-                              ibc_params,
-                              doSlipWallsHi,
-                              doSlipWallsLo,
-                              false,
-                              doPoiseInflow,
-                              initPoiseData,
-                              poiseBCValue,
-                              doWomersleyInflow);
+  a_ibc = RefCountedPtr<EBIBCFactory>(new InflowOutflowIBCFactory(flowDir,
+   				                                  inflowVel,
+	            				                  orderEBBC,
+				 	                          ibc_params,
+				        	                  doSlipWallsHi,
+				                	          doSlipWallsLo,
+				                        	  false,
+					                          doPoiseInflow,
+				        	                  initPoiseData,
+				                	          poiseBCValue,
+				                        	  doWomersleyInflow));
+}
+/**********/
+void setupCounterJetIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
+{
+
+  // read inputs
+  ParmParse pp;
+
+
+  int flowDir;
+  pp.get("flow_dir", flowDir);
+  Vector<int> nCells;
+  pp.getarr("n_cell",  nCells,0,SpaceDim);
+
+  Real jet1inflowVel;
+  pp.get("jet1_inflow_vel", jet1inflowVel);
+
+  int idoJet2;
+  pp.get("do_jet2", idoJet2);
+  bool doJet2 = idoJet2==1;
+
+  Real jet2inflowVel;
+  pp.get("jet2_inflow_vel", jet2inflowVel);
+
+  Real viscosity = 0.0;
+  pp.get("viscosity", viscosity);
+
+  int idoSlipWalls;
+  pp.get("do_slip_walls", idoSlipWalls);
+  bool doSlip = idoSlipWalls==1;
+  IntVect doSlipWallsLo = idoSlipWalls*IntVect::Unit;
+  IntVect doSlipWallsHi = idoSlipWalls*IntVect::Unit;
+  Vector<int> slipWallsLo,slipWallsHi;
+  if(doSlip)
+    {
+      pp.getarr("do_slip_walls_hi",slipWallsHi,0,SpaceDim);
+      pp.getarr("do_slip_walls_lo",slipWallsLo,0,SpaceDim);
+      for (int idir = 0; idir < SpaceDim; idir++)
+        {
+          doSlipWallsHi[idir] = slipWallsHi[idir];
+          doSlipWallsLo[idir] = slipWallsLo[idir];
+        }
+    }
+
+  int orderEBBC = 1;
+  pp.query("order_ebbc", orderEBBC);
+
+  bool doJet1PoiseInflow = false;
+  pp.query("jet1_poiseuille_inflow", doJet1PoiseInflow);
+
+  bool doJet2PoiseInflow = false;
+  pp.query("jet2_poiseuille_inflow", doJet2PoiseInflow);
+
+  bool initPoiseData = false;
+  pp.query("poiseuille_init", initPoiseData);
+  if(initPoiseData)
+  pout() << "Doing Poiseuille initialization" << endl;
+
+  RefCountedPtr<PoiseuilleInflowBCValue> jet1PoiseBCValue;//make this BaseBCValue if also doing constant values
+  RefCountedPtr<PoiseuilleInflowBCValue> jet2PoiseBCValue;
+
+  RealVect jet1centerPt, tubeAxis;
+  Real jet1tubeRadius;
+  Vector<Real> jet1centerPtVect, tubeAxisVect;
+  pp.get("jet1_poise_profile_radius", jet1tubeRadius);
+  pp.getarr("jet1_poise_profile_center_pt",  jet1centerPtVect,0,SpaceDim);
+  pp.getarr("poise_profile_axis",       tubeAxisVect,0,SpaceDim);
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    jet1centerPt[idir] = jet1centerPtVect[idir];
+    tubeAxis[idir] = tubeAxisVect[idir];
+  }
+
+  Real maxVelFactor;//= 1.5 for planar geometry, = 2.0 for cylindrical
+  pp.get("poise_maxvel_factor", maxVelFactor);
+  Real jet1maxVel = maxVelFactor*jet1inflowVel;
+
+  jet1PoiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue>(new PoiseuilleInflowBCValue(jet1centerPt,tubeAxis,jet1tubeRadius,jet1inflowVel,flowDir,viscosity));
+
+  RealVect jet2centerPt, jet2TubeOrig, jet2TubeEnd;
+  Real jet2tubeRadius;
+  Vector<Real> jet2centerPtVect, jet2TubeOrigVect, jet2TubeEndVect;
+  pp.get("jet2_poise_profile_radius", jet2tubeRadius);
+  pp.getarr("jet2_poise_profile_center_pt",  jet2centerPtVect,0,SpaceDim);
+  pp.getarr("jet2_tube_origin",  jet2TubeOrigVect,0,SpaceDim);
+  pp.getarr("jet2_tube_end",  jet2TubeEndVect,0,SpaceDim);
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    jet2centerPt[idir] = jet2centerPtVect[idir];
+    jet2TubeOrig[idir] = jet2TubeOrigVect[idir];
+    jet2TubeEnd[idir] = jet2TubeEndVect[idir];
+  }
+
+  Real jet2maxVel = maxVelFactor*jet2inflowVel;
+
+  jet2PoiseBCValue = RefCountedPtr<PoiseuilleInflowBCValue>(new PoiseuilleInflowBCValue(jet2centerPt,tubeAxis,jet2tubeRadius,jet2inflowVel,flowDir,viscosity));
+
+  a_ibc = RefCountedPtr<EBIBCFactory>(new counterJetIBCFactory(flowDir,
+			                                       doJet2,
+				                               jet1inflowVel,
+           				                       jet2inflowVel,
+ 					                       orderEBBC,
+                   					       jet2TubeOrig,
+                    					       jet2TubeEnd,
+     					                       doSlipWallsHi,
+      					                       doSlipWallsLo,
+           					               false,  // for adjoint solver
+							       doJet1PoiseInflow,
+    					                       doJet2PoiseInflow,
+      					                       initPoiseData,
+          					               jet1PoiseBCValue,
+                              				       jet2PoiseBCValue));
+}
+/***************/
+void ebamrieuler(const AMRParameters& a_params,
+                 const ProblemDomain& a_coarsestDomain)
+{
+
+  CH_TIMERS("ebamrins_driver");
+  CH_TIMER("define_ebamrnosubcycle_solver", t3);
+  CH_TIMER("init_ebamrnosubcycle_solver",   t4);
+  CH_TIMER("run ebamrnosubcycle_solver",   t5);
+
+
+  ParmParse pp;
+  Real viscosity = 0.0;
+  pp.get("viscosity", viscosity);
+
+  RefCountedPtr<EBIBCFactory> ibc;
+//  setupInflowOutflowIBC(ibc);
+  setupCounterJetIBC(ibc);
 
   CH_START(t3);
 
-  EBAMRNoSubcycle kahuna(a_params, ibc, a_coarsestDomain, viscosity);
+  EBAMRNoSubcycle kahuna(a_params, *ibc, a_coarsestDomain, viscosity);
 
   CH_STOP(t3);
 

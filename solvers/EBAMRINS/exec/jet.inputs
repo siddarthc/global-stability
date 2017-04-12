@@ -1,0 +1,115 @@
+max_step  	      = 35000
+max_time              = 7500.0
+
+#restart_file = check32400.nx256.2d.hdf5
+do_steady_state = 1
+
+mg_relax_type  = 2
+mg_relax_lazy  = true
+mg_num_smooths = 3
+#bottom solver:  0=BiCGStab, 1=EBSimpleSmoother
+mg_bottom_solver = 1
+mg_num_precond = 3
+mg_num_cycles = 1
+mg_hang        = 1.0e-2
+mg_tolerance   = 1.0e-12
+mg_norm_thresh = 1.0e-12
+mg_iter_max    = 750
+
+tag_on_scalar         = 0
+
+#euler
+viscosity             = 0.02
+refine_threshold      = 0.5
+#refine_threshold      = 7000.0
+
+#bcType = 0 for solid wall; 1 for free stream
+bcType                = 1
+do_slip_walls         = 1
+do_slip_walls_hi      = 0 1 1
+do_slip_walls_lo      = 0 1 1
+
+order_ebbc            = 2
+order_time            = 1
+
+use_limiting          = 0
+domain_length         = 100.0
+do_regrid_smoothing = true
+
+max_level	      = 1 
+n_cell                = 256 128 64
+ref_ratio	      = 4 4 4 2
+num_filter_iterations  = 4
+num_gphi_iterations    = 4
+num_init_iterations    = 4
+
+checkpoint_interval   = 100
+plot_interval	      = 100
+max_grid_size	      = 16
+fill_ratio	      = 0.7
+block_factor	      = 8
+regrid_interval	      = 25
+#regrid_interval	      = -1
+##this has to be bigger than one!
+max_dt_grow	      = 1000
+cfl		      = 0.8
+init_cfl	      = 0.8
+verbosity	      = 1
+nesting_radius	      = 4
+tag_buffer	      = 4
+
+flow_dir	      = 0
+jet1_inflow_vel       = 1.4285
+do_jet2               = 1
+jet2_inflow_vel       = -1.0
+
+jet1_poiseuille_inflow = false
+jet1_poise_profile_radius = 25.0
+jet1_poise_profile_center_pt = 0.0 25.0 25.0
+
+jet2_poiseuille_inflow = false
+jet2_poise_profile_radius = 0.5
+jet2_poise_profile_center_pt = 100.0 25.0 25.0
+
+jet2_tube_origin = 100.0 25.0 25.0
+jet2_tube_end = 70.0 25.0 25.0
+
+poiseuille_init = false
+poise_profile_axis = 1.0 0.0 0.0
+#maxvel_factor = 1.5 for planar and 2.0 for cylinder
+poise_maxvel_factor = 1.5 
+
+###geometry flag
+## 0 is all regular
+#which_geom = 0
+
+## 5 is a sphere
+#which_geom = 26
+
+#sphere_radius = 0.25
+#sphere_center = 1.0 0.5 0.5
+#cutplane_normal = 1.0 0.0 0.0
+
+which_geom = 27
+jet_center = 30.0 25.0 25.0
+jet_distance = 70.0 25.0 25.0
+jet_radius = 0.5
+wall_thickness = 0.5
+
+#SFD stuff:
+do_SFD = true
+restart_SFD = true
+plot_SFD = true
+nFilters = 1
+#smallest_filter = 8.0
+#largest_filter = 25.0
+smallest_filter = 0.5
+largest_filter = 0.5
+control_coef = 1.0
+do_PIControl = false
+integral_coef = 0.0 0.0
+
+convergence_metric = 0.000001
+convergence_variable = 0
+
+#fixed_dt = 0.025
