@@ -35,23 +35,15 @@ counterJetIBC::getVelBC(int a_icomp) const
 {
   //this is only used in the helmholtz solve so always no slip
   RefCountedPtr<BaseDomainBCFactory> helmBC = RefCountedPtr<BaseDomainBCFactory>(new counterJetHelmholtzDomainBCFactory(m_flowDir,
-
                                            m_doJet2,
-
                                            m_jet1inflowVel,
-
                                            m_jet2inflowVel,
-
                                            m_doJet1PoiseInflow,
-
                                            m_doJet2PoiseInflow,
-
                                            m_doSlipWallsHi,
-
                                            m_doSlipWallsLo,
-
+                                           m_adjointSolver,
                                            m_jet1PoiseInflowFunc,
-
                                            m_jet2PoiseInflowFunc));  
   return helmBC;
 }
@@ -85,6 +77,7 @@ getPressBC() const
                                                  m_doJet2PoiseInflow,
                                                  m_doSlipWallsHi,
                                                  m_doSlipWallsLo,
+                                                 m_adjointSolver,
                                                  m_jet1PoiseInflowFunc,
                                                  m_jet2PoiseInflowFunc));
   return poisBC;
@@ -105,6 +98,7 @@ getVelAdvectBC(int a_velComp) const
                                           m_doJet2PoiseInflow,
                                           m_doSlipWallsHi,
                                           m_doSlipWallsLo,
+                                          m_adjointSolver,
                                           m_jet1PoiseInflowFunc,
                                           m_jet2PoiseInflowFunc));
   return retval;
@@ -133,6 +127,7 @@ getMACVelBC() const
                                                  m_doJet2PoiseInflow,
                                                  m_doSlipWallsHi,
                                                  m_doSlipWallsLo,
+                                                 m_adjointSolver,
                                                  m_jet1PoiseInflowFunc,
                                                  m_jet2PoiseInflowFunc));
   return poisBC;
