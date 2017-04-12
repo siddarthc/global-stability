@@ -1590,6 +1590,11 @@ regrid(const Vector<Vector<Box> >& a_newGrids)
   //now fill new data holders, copying from old over old grids and interpolating where there is new grid
   tempLDPtr[0]->copyTo(interv, *m_velo[0], interv);
   tempLDPtr2[0]->copyTo(interv, *m_gphi[0], interv);
+
+  { // scoping for SFD level 0
+    if (m_params.m_doSFD) m_SFDOp[0].regridBaseData(*tempLDPtr[0],m_eblg[0]); 
+  }
+
   for (int ilev=1; ilev<= m_finestLevel; ilev++)
     {
       //interpolate everywhere

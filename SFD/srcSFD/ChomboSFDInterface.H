@@ -51,6 +51,10 @@ public:
               EBLevelGrid&                          a_eblg,
               EBPWLFineInterp&                      a_interp);
 
+  // regrid level0 data
+  void regridBaseData(LevelData<EBCellFAB>&                 a_tempFAB,
+                      EBLevelGrid&                          a_eblg);
+
   virtual Vector<string> getDataNames() const;
 
   virtual Vector<string> getDataNames(int a_filterIndex) const;

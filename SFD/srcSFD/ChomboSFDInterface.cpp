@@ -196,8 +196,39 @@ regrid(LevelData<EBCellFAB>& a_tempFAB,
 
         a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
       }
-
     }
+}
+/*********/
+void ChomboSFDInterface::
+regridBaseData(LevelData<EBCellFAB>&                 a_tempFAB,
+               EBLevelGrid&                          a_eblg)
+{ 
+  IntVect ivGhost = a_eblg.getGhost()*IntVect::Unit;
+  EBCellFactory fact(a_eblg.getEBISL());
+
+  for (int i = 0; i < m_qBar.size(); i++)
+    {
+      int nComp = m_qBar[i]->nComp();
+      Interval interv(0, nComp-1);
+      m_qBar[i]->copyTo(interv, a_tempFAB, interv);
+      m_qBar[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+      a_tempFAB.copyTo(interv, *(m_qBar[i]), interv);
+
+      // regrid PI control stuff
+      if (m_doPIControl)
+      {
+        m_qdiffOld[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        a_tempFAB.copyTo(interv, *(m_qdiffOld[i]), interv);
+
+        m_qdiffNew[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffNew[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
+      }
+    } 
 }
 /*********/
 Vector<string> ChomboSFDInterface::
