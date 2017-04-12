@@ -1649,7 +1649,7 @@ EBAMRNoSubcycle::postTimeStep()
 
   averageDownExtraTerms();
 
-  if (m_params.m_doSFD)
+  if (m_params.m_doSFD && !m_advanceGphiOnly)
   {
 /*
     for (int ilev = 0; ilev <= m_finestLevel; ilev++)

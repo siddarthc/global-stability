@@ -2,7 +2,7 @@ max_step  	      = 35000
 max_time              = 7500.0
 
 #restart_file = check32400.nx256.2d.hdf5
-do_steady_state = 1
+do_steady_state = 0
 
 mg_relax_type  = 2
 mg_relax_lazy  = true
