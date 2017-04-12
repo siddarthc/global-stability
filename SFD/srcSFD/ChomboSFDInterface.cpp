@@ -32,6 +32,7 @@ ChomboSFDInterface::~ChomboSFDInterface()
       // for PI control
       if (m_qdiffOld[i] != NULL) delete m_qdiffOld[i];
       if (m_qdiffNew[i] != NULL) delete m_qdiffNew[i];
+      if (m_qdiffNew[i] != NULL) delete m_qdiffSum[i];
     }
 
 }
@@ -56,6 +57,7 @@ define(int    a_nFilters,
   {
     m_qdiffOld.resize(a_nFilters);
     m_qdiffNew.resize(a_nFilters);
+    m_qdiffSum.resize(a_nFilters);
   }
   
 
@@ -83,11 +85,15 @@ initialize(const LevelData<EBCellFAB>& a_data,
       {
         m_qdiffOld[i] = new LevelData<EBCellFAB>();
         m_qdiffNew[i] = new LevelData<EBCellFAB>();
+        m_qdiffSum[i] = new LevelData<EBCellFAB>();
+
         m_qdiffOld[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
         m_qdiffNew[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
+        m_qdiffSum[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
 
         EBLevelDataOps::setToZero(*m_qdiffOld[i]);
         EBLevelDataOps::setToZero(*m_qdiffNew[i]);
+        EBLevelDataOps::setToZero(*m_qdiffSum[i]);
       }
     }
 }
@@ -115,6 +121,7 @@ doEBCoarseAverage(ChomboSFDInterface* a_finerLevel,
         {
           a_ebCoarseAverage.average(*(m_qdiffOld[i]), *((a_finerLevel->m_qdiffOld)[i]), interv);
           a_ebCoarseAverage.average(*(m_qdiffNew[i]), *((a_finerLevel->m_qdiffNew)[i]), interv);
+          a_ebCoarseAverage.average(*(m_qdiffSum[i]), *((a_finerLevel->m_qdiffSum)[i]), interv);
         }
       }
   }
@@ -144,6 +151,11 @@ operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg)
     {
       EBLevelDataOps::setToZero(*m_qdiffNew[i]);
       EBLevelDataOps::axby(*m_qdiffNew[i], a_q, *m_qBar[i], 1., -1.);
+
+      // set source = -sum(integralCoef*integral(qdiff))
+      //    integral(qdiff) from t1 to t2 =  a_dt*0.5*(qdiffNew + qdiffOld)
+      EBLevelDataOps::incr(*m_qdiffSum[i], *m_qdiffNew[i], a_dt/2.);
+      EBLevelDataOps::incr(*m_qdiffSum[i], *m_qdiffOld[i], a_dt/2.);
     }
   }
 }
@@ -194,7 +206,17 @@ regrid(LevelData<EBCellFAB>& a_tempFAB,
           a_interp.interpolate(*(m_qdiffNew[i]), *((a_coarLevel->m_qdiffNew)[i]), interv);
         }
 
-        a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
+        a_tempFAB.copyTo(interv, *(m_qdiffSum[i]), interv);
+
+        m_qdiffSum[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffSum[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        if (a_coarLevel != NULL)
+        {
+          a_interp.interpolate(*(m_qdiffSum[i]), *((a_coarLevel->m_qdiffSum)[i]), interv);
+        }
+
+        a_tempFAB.copyTo(interv, *(m_qdiffSum[i]), interv);
       }
     }
 }
@@ -227,6 +249,11 @@ regridBaseData(LevelData<EBCellFAB>&                 a_tempFAB,
         m_qdiffNew[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
 
         a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
+
+        m_qdiffSum[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffSum[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        a_tempFAB.copyTo(interv, *(m_qdiffSum[i]), interv);
       }
     } 
 }
@@ -387,8 +414,11 @@ getNavierStokesSource(LevelData<EBCellFAB>& a_source, Real a_dt, bool a_updateOl
     //    integral(qdiff) from t1 to t2 =  a_dt*0.5*(qdiffNew + qdiffOld)
     for (int i = 0; i < m_qBar.size(); i++)
     {
+/*
       EBLevelDataOps::incr(a_source, *m_qdiffNew[i], -m_integralCoef[i]*a_dt/2.);
       EBLevelDataOps::incr(a_source, *m_qdiffOld[i], -m_integralCoef[i]*a_dt/2.);
+*/
+      EBLevelDataOps::incr(a_source, *m_qdiffSum[i], -m_integralCoef[i]);
     }
 
     if (a_updateOldToNew)
@@ -416,9 +446,13 @@ getNavierStokesSource(LevelData<EBCellFAB>& a_source, const int& a_startSrcComp,
       for (DataIterator dit = a_source.dataIterator(); dit.ok(); ++dit)
       {
         DataIndex d = dit();
+/*
         a_source[d].plus((*m_qdiffNew[i])[d], a_startSFDComp, a_startSrcComp, a_nComp);
         a_source[d].plus((*m_qdiffOld[i])[d], a_startSFDComp, a_startSrcComp, a_nComp);
         a_source[d].mult(-m_integralCoef[i]*a_dt/2.);
+*/
+        a_source[d].plus((*m_qdiffSum[i])[d], a_startSFDComp, a_startSrcComp, a_nComp);
+        a_source[d].mult(-m_integralCoef[i]);
       }
     }
 
@@ -458,6 +492,9 @@ writeCheckpointLevel(HDF5Handle& a_handle, int a_filterIndex) const
 
     string str3 = "qdiffNew"+SSTR(a_filterIndex);
     write(a_handle, *(m_qdiffNew[a_filterIndex]), str3);
+
+    string str4 = "qdiffSum"+SSTR(a_filterIndex);
+    write(a_handle, *(m_qdiffSum[a_filterIndex]), str4);
   }
 }
 /*********/
@@ -487,9 +524,11 @@ readCheckpointLevel(HDF5Handle& a_handle, int a_filterIndex, EBLevelGrid& a_eblg
   {
     m_qdiffOld[a_filterIndex] = new LevelData<EBCellFAB>();
     m_qdiffNew[a_filterIndex] = new LevelData<EBCellFAB>();
+    m_qdiffSum[a_filterIndex] = new LevelData<EBCellFAB>();
 
     m_qdiffOld[a_filterIndex]->define(a_eblg.getDBL(), m_nComp, ivGhost, factoryNew);
     m_qdiffNew[a_filterIndex]->define(a_eblg.getDBL(), m_nComp, ivGhost, factoryNew);
+    m_qdiffSum[a_filterIndex]->define(a_eblg.getDBL(), m_nComp, ivGhost, factoryNew);
   }
 
   string str1 = "qBar"+SSTR(a_filterIndex);
@@ -506,6 +545,7 @@ readCheckpointLevel(HDF5Handle& a_handle, int a_filterIndex, EBLevelGrid& a_eblg
   {
     string str2 = "qdiffOld"+SSTR(a_filterIndex);
     string str3 = "qdiffNew"+SSTR(a_filterIndex);
+    string str4 = "qdiffSum"+SSTR(a_filterIndex);
 
     dataStatus = read<EBCellFAB>(a_handle, *(m_qdiffOld[a_filterIndex]), str2, a_eblg.getDBL(), Interval(), false);
     if ((dataStatus != 0))
@@ -514,6 +554,12 @@ readCheckpointLevel(HDF5Handle& a_handle, int a_filterIndex, EBLevelGrid& a_eblg
     }
 
     dataStatus = read<EBCellFAB>(a_handle, *(m_qdiffNew[a_filterIndex]), str3, a_eblg.getDBL(), Interval(), false);
+    if ((dataStatus != 0))
+    {
+      MayDay::Error("file does not contain qdiffNew data");
+    }
+
+    dataStatus = read<EBCellFAB>(a_handle, *(m_qdiffSum[a_filterIndex]), str4, a_eblg.getDBL(), Interval(), false);
     if ((dataStatus != 0))
     {
       MayDay::Error("file does not contain qdiffNew data");

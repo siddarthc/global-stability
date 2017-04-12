@@ -112,6 +112,7 @@ protected:
   // for PI control
   Vector<LevelData<EBCellFAB>* > m_qdiffOld;
   Vector<LevelData<EBCellFAB>* > m_qdiffNew;
+  Vector<LevelData<EBCellFAB>* > m_qdiffSum;
 
   Vector<Real> m_integralCoef;
   bool m_doPIControl;
