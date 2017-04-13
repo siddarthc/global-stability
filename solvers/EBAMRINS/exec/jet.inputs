@@ -103,11 +103,11 @@ plot_SFD = true
 nFilters = 1
 #smallest_filter = 8.0
 #largest_filter = 25.0
-smallest_filter = 0.5
-largest_filter = 0.5
+smallest_filter = 2.0
+largest_filter = 2.0
 control_coef = 1.0
-do_PIControl = false
-integral_coef = 0.0 0.0
+do_PIControl = true
+integral_coef = 0.1 0.0
 
 convergence_metric = 0.000001
 convergence_variable = 0

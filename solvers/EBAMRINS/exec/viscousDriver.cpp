@@ -260,8 +260,8 @@ void ebamrieuler(const AMRParameters& a_params,
   pp.get("viscosity", viscosity);
 
   RefCountedPtr<EBIBCFactory> ibc;
-//  setupInflowOutflowIBC(ibc);
-  setupCounterJetIBC(ibc);
+  setupInflowOutflowIBC(ibc);
+//  setupCounterJetIBC(ibc);
 
   CH_START(t3);
 

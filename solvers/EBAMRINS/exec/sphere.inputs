@@ -1,4 +1,4 @@
-#restart_file          = check60000.nx256.2d.hdf5
+restart_file          = check.nx256.step.7000.2d.hdf5
 max_step  	      = 60050
 max_time              = 1000000
 
@@ -79,17 +79,17 @@ cutplane_normal = 1.0 0.0 0.0
 
 #SFD stuff
 do_SFD = true
-restart_SFD = false
+restart_SFD = true
 plot_SFD = true
 nFilters = 1
 #smallest_filter = 3.144
 #largest_filter = 3.144
 #control_coef = 0.451
 
-smallest_filter = 0.25
-largest_filter = 0.25
+smallest_filter = 2.0
+largest_filter = 2.0
 control_coef = 1.0
-do_PIControl = false
+do_PIControl = true
 integral_coef = 0.0 0.0
 
 convergence_metric = 0.000001

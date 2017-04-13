@@ -7,7 +7,7 @@
 #SBATCH -p normal        # queue
 #SBATCH -N 11              # Number of nodes, not cores (16 cores/node)
 #SBATCH -n 264             # Total number of MPI tasks (if omitted, n=N)
-#SBATCH -t 00:10:00       # max time
+#SBATCH -t 02:00:00       # max time
 
 #SBATCH --mail-user=siddarth.chintamani@mavs.uta.edu
 #SBATCH --mail-type=ALL
@@ -15,4 +15,4 @@
 #SBATCH -A Three-Dimensional-Ef
 
                           # Run the MPI executable named "addexe"
-ibrun ./viscousDriver2d.Linux.64.mpicxx.ifort.DEBUG.MPI.ex jet.inputs
+ibrun ./viscousDriver2d.Linux.64.mpicxx.ifort.DEBUG.MPI.ex sphere.inputs
