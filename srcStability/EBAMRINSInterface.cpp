@@ -26,6 +26,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
                   bool                 a_plotSnapshots,
                   bool                 a_doLinINS,
                   bool                 a_doAdjoint,
+                  bool                 a_doTransientGrowth,
                   bool                 a_doFirstOrderFreDeriv,
                   const EBIndexSpace* const a_ebisPtr)
 {
@@ -41,6 +42,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
   m_plotSnapshots = a_plotSnapshots;
   m_doLinINS = a_doLinINS;
   m_doAdjoint = a_doAdjoint;
+  m_doTransientGrowth = a_doTransientGrowth;
   m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
 }
 /*********/
@@ -154,39 +156,75 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
   {
     // make a_y = f(Ubar + eps*Uprime);
     // the solution should be independent of eps
-    EBAMRLinINS solver(m_params, *m_baseflowIBCFact, *m_solverIBCFact, m_coarsestDomain, m_viscosity, m_doAdjoint);
+    {
+      bool BCflag = (!m_doTransientGrowth) ? m_doAdjoint : false;
+      EBAMRLinINS solver(m_params, *m_baseflowIBCFact, *m_solverIBCFact, m_coarsestDomain, m_viscosity, BCflag);
 
-    solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
+      solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
 
-      Real fixedDt = 0.;
-      ParmParse pp;
-      pp.query("fixed_dt", fixedDt);
-      if (fixedDt > 1.e-12)
-      {
-        solver.useFixedDt(fixedDt);
-      }
+        Real fixedDt = 0.;
+        ParmParse pp;
+        pp.query("fixed_dt", fixedDt);
+        if (fixedDt > 1.e-12)
+        {
+          solver.useFixedDt(fixedDt);
+        }
 
-      int maxStep = 1000000;
-      solver.run(a_integrationTime, maxStep);
+        int maxStep = 1000000;
+        solver.run(a_integrationTime, maxStep);
 
-      int check1 = a_y.PutScalar(0.);
-      CH_assert(check1 == 0);
+        int check1 = a_y.PutScalar(0.);
+        CH_assert(check1 == 0);
 
-      const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+        const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
 //      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
 
-      int nVeloComp = veloSoln[0]->nComp();
+        int nVeloComp = veloSoln[0]->nComp();
 //      int nPresComp = presSoln[0]->nComp();
-      int totComp = this->nComp();
-//    CH_assert(totComp == nVeloComp + nPresComp);
+        int totComp = this->nComp();
+//      CH_assert(totComp == nVeloComp + nPresComp);
 
-//      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+//        ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
 
-      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./a_eps, 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+        ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./a_eps, 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
 
-//    ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
-  } 
+//      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
+    }
+    if (m_doTransientGrowth)
+    {
+      EBAMRLinINS solver(m_params, *m_baseflowIBCFact, *m_solverIBCFact, m_coarsestDomain, m_viscosity, true);
 
+      solver.setupForStabilityRun(a_y, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
+
+        Real fixedDt = 0.;
+        ParmParse pp;
+        pp.query("fixed_dt", fixedDt);
+        if (fixedDt > 1.e-12)
+        {
+          solver.useFixedDt(fixedDt);
+        }
+
+        int maxStep = 1000000;
+        solver.run(a_integrationTime, maxStep);
+
+        int check1 = a_y.PutScalar(0.);
+        CH_assert(check1 == 0);
+
+        const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+//      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
+
+        int nVeloComp = veloSoln[0]->nComp();
+//      int nPresComp = presSoln[0]->nComp();
+        int totComp = this->nComp();
+//      CH_assert(totComp == nVeloComp + nPresComp);
+
+//        ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+
+        ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./a_eps, 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+
+//      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio); 
+    }
+  }
   else
   {
     {

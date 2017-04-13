@@ -26,6 +26,7 @@ public:
                     bool                 a_plotSnapshots,
                     bool                 a_doLinINS,
                     bool                 a_doAdjoint,
+                    bool                 a_doTransientGrowth,
                     bool                 a_doFirstOrderFreDeriv = false,
                     const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance());
 
@@ -70,6 +71,7 @@ private:
   bool m_plotSnapshots;
   bool m_doLinINS;
   bool m_doAdjoint;
+  bool m_doTransientGrowth;
   bool m_doFirstOrderFreDeriv;
 
   Real m_baseflowL2Norm;

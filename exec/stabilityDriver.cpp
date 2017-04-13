@@ -89,6 +89,11 @@ void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc, bool a_homogeneou
   bool doAdjoint;
   pp.get("do_adjoint", doAdjoint);
 
+  bool doTransientGrowth;
+  pp.get("do_transient_growth", doTransientGrowth);
+
+  bool homogeneousBC = (doAdjoint || doTransientGrowth);
+
   int orderEBBC = 1;
   pp.query("order_ebbc", orderEBBC);
 
@@ -114,7 +119,7 @@ void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc, bool a_homogeneou
                                                                   ibc_params,
                                                                   doSlipWallsHi,
                                                                   doSlipWallsLo,
-                                                                  doAdjoint,
+                                                                  homogeneousBC,
                                                                   doPoiseInflow,
                                                                   initPoiseData,
                                                                   poiseBCValue,
@@ -165,6 +170,11 @@ void setupCounterJetIBC(RefCountedPtr<EBIBCFactory>& a_ibc, bool a_homogeneousBC
 
   bool doAdjoint;
   pp.get("do_adjoint", doAdjoint);
+
+  bool doTransientGrowth;
+  pp.get("do_transient_growth", doTransientGrowth);
+
+  bool homogeneousBC = (doAdjoint || doTransientGrowth);
 
   int orderEBBC = 1;
   pp.query("order_ebbc", orderEBBC);
@@ -228,7 +238,7 @@ void setupCounterJetIBC(RefCountedPtr<EBIBCFactory>& a_ibc, bool a_homogeneousBC
                                                                jet2TubeEnd,
                                                                doSlipWallsHi,
                                                                doSlipWallsLo,
-                                                               doAdjoint,
+                                                               homogeneousBC,
                                                                doJet1PoiseInflow,
                                                                doJet2PoiseInflow,
                                                                initPoiseData,
@@ -264,6 +274,9 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   bool doAdjoint;
   pp.get("do_adjoint", doAdjoint);
 
+  bool doTransientGrowth;
+  pp.get("do_transient_growth", doTransientGrowth);
+
   bool firstOrderFreDeriv;
   pp.get("do_first_order_fre_deriv", firstOrderFreDeriv);
 
@@ -287,7 +300,7 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
 
 // end solver IBC 
 
-  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, doAdjoint, firstOrderFreDeriv));
+  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, doAdjoint, doTransientGrowth, firstOrderFreDeriv));
 
   RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
 

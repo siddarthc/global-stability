@@ -23,6 +23,7 @@ public:
                            bool                 a_plotSnapshots,
                            bool                 a_doLinINS,
                            bool                 a_doAdjoint,
+                           bool                 a_doTransientGrowth,
                            bool                 a_doFirstOrderFreDeriv = false,
                            const EBIndexSpace* const a_ebisPtr = Chombo_EBIS::instance())
 
@@ -36,6 +37,7 @@ public:
     m_plotSnapshots   = a_plotSnapshots;
     m_doLinINS        = a_doLinINS;
     m_doAdjoint       = a_doAdjoint;
+    m_doTransientGrowth = a_doTransientGrowth;
     m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
   }
 
@@ -56,6 +58,7 @@ public:
                                                       m_plotSnapshots,
                                                       m_doLinINS,
                                                       m_doAdjoint,
+                                                      m_doTransientGrowth,
                                                       m_doFirstOrderFreDeriv,
                                                       m_ebisPtr);
 
@@ -72,6 +75,7 @@ private:
   bool                        m_plotSnapshots;
   bool                        m_doLinINS;
   bool                        m_doAdjoint;
+  bool                        m_doTransientGrowth;
   bool                        m_doFirstOrderFreDeriv;
   const EBIndexSpace*         m_ebisPtr;
 
