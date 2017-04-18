@@ -1644,7 +1644,7 @@ EBAMRNoSubcycle::postTimeStep()
       for (int ilev = 0; ilev <= m_finestLevel; ilev++)
         {
           pout() << "doing SFD step for level = " << ilev << endl;
-          m_SFDOp[ilev](*m_velo[ilev], m_dt, m_eblg[ilev]);
+          m_SFDOp[ilev](*m_velo[ilev], m_dt, m_eblg[ilev], m_time, m_curStep);
         }
     }
 
@@ -1663,12 +1663,31 @@ EBAMRNoSubcycle::postTimeStep()
         bool isConverged = m_SFDOp[ilev].convergedToSteadyState(*m_velo[ilev], m_eblg[ilev]);
       }
 */
-    Real L2Norm, LinfNorm;
+    Real L2Norm, LinfNorm, qdiffDotProd;
     const int nFilters = m_SFDOp[0].getnFilters();
     for (int iFilter = 0; iFilter < nFilters; iFilter++)
     {
       SFDUtils::computeLinfNorm(LinfNorm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
       SFDUtils::computeL2Norm(L2Norm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+      SFDUtils::computeQDiffDotProd(qdiffDotProd, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+
+      if (qdiffDotProd < 0.) 
+      {
+        std::string pltName = "plot_integrated_error_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
+        SFDUtils::plotSFDIntegratorError(pltName, m_SFDOp, m_grids, m_ebisl, m_domain, m_dx, m_dt, m_time, m_params.m_refRatio, iFilter);
+
+        Real errorNorm;
+        SFDUtils::computeIntegratedErrorL2Norm(errorNorm, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+
+        pout() << "||integrated error||2 for filter " << iFilter << " = " << errorNorm << endl;
+
+        for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+        {
+          m_SFDOp[ilev].resetIntegratorToZero(iFilter, false);
+        }
+        pout() << "Integrator for filter " << iFilter << " reset at time = " << m_time << endl; 
+      }
+
       pout() << "||q-qBar||inf for filter " << iFilter << " = " << LinfNorm << endl;
       pout() << "||q-qBar||2 for filter " << iFilter << " = " << L2Norm << endl;
       if (procID() == 0)

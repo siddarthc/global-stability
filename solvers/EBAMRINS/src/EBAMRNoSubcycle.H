@@ -624,6 +624,9 @@ protected:
   int m_finestLevel;
   int m_curStep;
 
+  // for PI control
+  int m_tmpCounter;
+
   //  time stepping information
   Real m_time;
   Real m_dt;

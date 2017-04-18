@@ -902,7 +902,7 @@ getVolWeights(Epetra_Vector*                   a_weights,
   //broadcast the sum to all processors.
   broadcast(a_domainVolume, baseProc); 
 
-  double scalingFactor = sqrt(1./coarsestCellVol);
+  double scalingFactor = sqrt(1./a_domainVolume);
   a_weights->Scale(scalingFactor);
 }
 /*********/

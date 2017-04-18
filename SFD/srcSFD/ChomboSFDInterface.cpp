@@ -128,7 +128,7 @@ doEBCoarseAverage(ChomboSFDInterface* a_finerLevel,
 }
 /*********/
 void ChomboSFDInterface::
-operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg)
+operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg, double a_time, int a_curStep)
 {
   CH_assert(m_isDefined);
   
@@ -157,6 +157,16 @@ operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg)
       EBLevelDataOps::incr(*m_qdiffSum[i], *m_qdiffNew[i], a_dt/2.);
       EBLevelDataOps::incr(*m_qdiffSum[i], *m_qdiffOld[i], a_dt/2.);
     }
+  }
+}
+/*********/
+void ChomboSFDInterface::
+resetIntegratorToZero(int a_iFilter, bool a_turnOff)
+{
+  if (m_doPIControl)
+  {
+    EBLevelDataOps::setToZero(*m_qdiffSum[a_iFilter]);
+    if (a_turnOff) m_integralCoef[a_iFilter] = 0.; 
   }
 }
 /*********/
@@ -301,7 +311,9 @@ getDataNames(int a_filterIndex) const
 int ChomboSFDInterface::
 getnComp() const
 {
-  return m_nComp*m_qBar.size();
+  int retVal = m_nComp*m_qBar.size();
+//  if (m_doPIControl) retVal *= 2;
+  return retVal;
 }
 /*********/
 void ChomboSFDInterface::
@@ -319,6 +331,8 @@ appendDataToFAB(LevelData<FArrayBox>& a_result,
       appendDataToFAB(a_result, *(m_qBar[i]), startIndex, a_eblg);
       nComp += m_qBar[i]->nComp();
     }
+
+//  if (m_doPIContro)
 }
 /*********/
 void ChomboSFDInterface::
@@ -364,6 +378,84 @@ const Vector<LevelData<EBCellFAB>* >* ChomboSFDInterface::
 getData() const
 {
   return &m_qBar;
+}
+/*********/
+const Vector<LevelData<EBCellFAB>* >* ChomboSFDInterface::
+getIntegratedError() const
+{
+  if (m_doPIControl) 
+  {
+    return &m_qdiffSum;
+  }
+  else 
+  {
+    return NULL;
+  }
+}
+/*********/
+const Vector<LevelData<EBCellFAB>* >*  ChomboSFDInterface::
+getQdiffNew() const
+{
+  if (m_doPIControl)
+  {
+    return &m_qdiffNew;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+/*********/
+const Vector<LevelData<EBCellFAB>* >*  ChomboSFDInterface::
+getQdiffOld() const
+{
+  if (m_doPIControl)
+  {
+    return &m_qdiffOld;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+/*********/
+const LevelData<EBCellFAB>*  ChomboSFDInterface::
+getQdiffNew(int a_filterIndex) const
+{
+  if (m_doPIControl)
+  {
+    return m_qdiffNew[a_filterIndex];
+  }
+  else
+  {
+    return NULL;
+  }
+}
+/*********/
+const LevelData<EBCellFAB>*  ChomboSFDInterface::
+getQdiffOld(int a_filterIndex) const
+{
+  if (m_doPIControl)
+  {
+    return m_qdiffOld[a_filterIndex];
+  }
+  else
+  {
+    return NULL;
+  }
+}
+/*********/
+const LevelData<EBCellFAB>*  ChomboSFDInterface::
+getIntegratedError(int a_filterIndex) const
+{
+  if (m_doPIControl)
+  {
+    return m_qdiffSum[a_filterIndex];
+  }
+  else
+  {
+    return NULL;
+  }
 }
 /*********/
 int ChomboSFDInterface::

@@ -44,7 +44,7 @@ public:
   void doEBCoarseAverage(ChomboSFDInterface* a_finerLevel,
                          EBCoarseAverage& a_ebCoarseAverage);
 
-  void operator() (LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg);
+  void operator() (LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg, double a_time = 0, int a_curStep = 0);
 
   void regrid(LevelData<EBCellFAB>&                 a_tempFAB,
               ChomboSFDInterface*                   a_coarLevel,
@@ -69,6 +69,20 @@ public:
                                const EBLevelGrid&                a_eblg) const;
 
   const Vector<LevelData<EBCellFAB>* >* getData() const;
+
+  const Vector<LevelData<EBCellFAB>* >* getIntegratedError() const;
+
+  const Vector<LevelData<EBCellFAB>* >* getQdiffNew() const;
+
+  const Vector<LevelData<EBCellFAB>* >* getQdiffOld() const;
+
+  const LevelData<EBCellFAB>* getQdiffNew(int a_filterIndex) const;
+
+  const LevelData<EBCellFAB>* getQdiffOld(int a_filterIndex) const;
+
+  const LevelData<EBCellFAB>* getIntegratedError(int a_filterIndex) const;
+
+  virtual void resetIntegratorToZero(int a_iFilter, bool a_turnOff);
 
   bool convergedToSteadyState(const LevelData<EBCellFAB>& a_data, EBLevelGrid& a_eblg);
 
