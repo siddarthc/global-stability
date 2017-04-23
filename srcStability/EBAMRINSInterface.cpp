@@ -162,31 +162,31 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
 
       solver.setupForStabilityRun(a_x, a_baseflowDBL, a_baseflowEBLG, a_baseflowFile, a_eps, a_incOverlapData);
 
-        Real fixedDt = 0.;
-        ParmParse pp;
-        pp.query("fixed_dt", fixedDt);
-        if (fixedDt > 1.e-12)
+      Real fixedDt = 0.;
+      ParmParse pp;
+      pp.query("fixed_dt", fixedDt);
+      if (fixedDt > 1.e-12)
         {
           solver.useFixedDt(fixedDt);
         }
 
-        int maxStep = 1000000;
-        solver.run(a_integrationTime, maxStep);
+      int maxStep = 1000000;
+      solver.run(a_integrationTime, maxStep);
 
-        int check1 = a_y.PutScalar(0.);
-        CH_assert(check1 == 0);
+      int check1 = a_y.PutScalar(0.);
+      CH_assert(check1 == 0);
 
-        const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
+      const Vector<LevelData<EBCellFAB>* > veloSoln = solver.getVeloNew();
 //      const Vector<LevelData<EBCellFAB>* > presSoln = solver.getPresNew();
 
-        int nVeloComp = veloSoln[0]->nComp();
+      int nVeloComp = veloSoln[0]->nComp();
 //      int nPresComp = presSoln[0]->nComp();
-        int totComp = this->nComp();
+      int totComp = this->nComp();
 //      CH_assert(totComp == nVeloComp + nPresComp);
 
 //        ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1., 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
 
-        ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./a_eps, 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
+      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, veloSoln, 0., 1./a_eps, 0, 0, nVeloComp, totComp, a_incOverlapData, m_refRatio);
 
 //      ChomboEpetraOps::addChomboDataToEpetraVec(&a_y, presSoln, 0., 1., nVeloComp, 0, nPresComp, totComp, a_incOverlapData, m_refRatio);
     }

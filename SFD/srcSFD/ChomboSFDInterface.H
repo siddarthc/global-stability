@@ -70,6 +70,8 @@ public:
 
   const Vector<LevelData<EBCellFAB>* >* getData() const;
 
+  const LevelData<EBCellFAB>* getData(int a_filterIndex) const;
+
   const Vector<LevelData<EBCellFAB>* >* getIntegratedError() const;
 
   const Vector<LevelData<EBCellFAB>* >* getQdiffNew() const;
@@ -82,7 +84,9 @@ public:
 
   const LevelData<EBCellFAB>* getIntegratedError(int a_filterIndex) const;
 
-  virtual void resetIntegratorToZero(int a_iFilter, bool a_turnOff);
+  virtual void resetIntegrator(LevelData<EBCellFAB>& a_q, int a_iFilter, bool a_turnOff);
+
+  virtual void resetState(const LevelData<EBCellFAB>& a_val, int a_iFilter);
 
   bool convergedToSteadyState(const LevelData<EBCellFAB>& a_data, EBLevelGrid& a_eblg);
 
@@ -127,6 +131,12 @@ protected:
   Vector<LevelData<EBCellFAB>* > m_qdiffOld;
   Vector<LevelData<EBCellFAB>* > m_qdiffNew;
   Vector<LevelData<EBCellFAB>* > m_qdiffSum;
+
+  // m_qBar values in the previous resets
+  Vector<LevelData<EBCellFAB>* > m_qBar_tOld;
+  Vector<LevelData<EBCellFAB>* > m_qdiffSum_tOld;
+  
+  int m_nResetSteps;
 
   Vector<Real> m_integralCoef;
   bool m_doPIControl;

@@ -47,7 +47,7 @@
 
 
 /**********/
-void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
+void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc, bool a_homogeneousInflow = false)
 {
   
   // read inputs
@@ -60,6 +60,7 @@ void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
 
   Real inflowVel;
   pp.get("inflow_vel", inflowVel);
+  if (a_homogeneousInflow) inflowVel = 0.;
 
   int idoSlipWalls;
   pp.get("do_slip_walls", idoSlipWalls);
@@ -133,7 +134,7 @@ void setupInflowOutflowIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
 				                        	  doWomersleyInflow));
 }
 /**********/
-void setupCounterJetIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
+void setupCounterJetIBC(RefCountedPtr<EBIBCFactory>& a_ibc, bool a_homogeneousInflow = false)
 {
 
   // read inputs
@@ -154,6 +155,12 @@ void setupCounterJetIBC(RefCountedPtr<EBIBCFactory>& a_ibc)
 
   Real jet2inflowVel;
   pp.get("jet2_inflow_vel", jet2inflowVel);
+
+  if (a_homogeneousInflow)
+  {
+    jet1inflowVel = 0.;
+    jet2inflowVel = 0.;
+  }
 
   Real viscosity = 0.0;
   pp.get("viscosity", viscosity);
@@ -266,6 +273,13 @@ void ebamrieuler(const AMRParameters& a_params,
   CH_START(t3);
 
   EBAMRNoSubcycle kahuna(a_params, *ibc, a_coarsestDomain, viscosity);
+
+  RefCountedPtr<EBIBCFactory> linIBC;
+  if (a_params.m_doNewtonIterations) 
+  {
+    setupInflowOutflowIBC(linIBC, true);
+    kahuna.setLinINSIBC(*linIBC);
+  }
 
   CH_STOP(t3);
 

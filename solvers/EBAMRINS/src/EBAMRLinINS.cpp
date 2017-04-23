@@ -245,6 +245,87 @@ setupCoveredBaseAdvVelocity(const Vector<LevelData<EBCellFAB>* >& a_baseVelo,
   }
 }
 /*********/
+// Newton Iteration routines
+/*********/
+void EBAMRLinINS::
+setupForNewtonIterationRun(const Vector<LevelData<EBCellFAB>* >& a_initialVelo, 
+                           const Vector<LevelData<EBCellFAB>* >& a_baseflowVelo, 
+                           const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo, 
+                           const Vector<DisjointBoxLayout>&      a_baseflowDBL, 
+                           const Vector<EBLevelGrid>&            a_baseflowEBLG,
+                           Real                                  a_pertScale)
+{
+
+  if (m_params.m_verbosity > 3)
+  {
+    pout() << "EBAMRNoSubcycle::setupForNewtonIterationRun" << endl;
+  }
+
+  // turn off regridding - don't wanna deal with any more complexity
+  m_params.m_regridInterval = -1;
+  m_params.m_doSFD = 0;
+  m_doAdjoint = false;
+  m_params.m_checkpointInterval = -1;
+  m_params.m_plotInterval = -1;
+  m_isSetup = true;
+
+  m_finestLevel = a_baseflowDBL.size() - 1;
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    m_grids[ilev] = a_baseflowDBL[ilev];
+  }
+
+  defineEBISLs();
+  defineExtraEBISLs();
+  defineNewVel();
+  definePressure();
+  defineProjections();
+
+  defineNewBaseflowVel();
+  defineBaseflowVelocityGradients();
+
+  // intialize data for StabilityRun:
+  if (m_params.m_verbosity >= 3)
+  {
+    pout() << "EBAMRNoSubcycle::initialize data for Newton iteration run" << endl;
+  }
+
+  EBAMRDataOps::setToZero(m_velo);
+  EBAMRDataOps::setToZero(m_pres);
+  EBAMRDataOps::setToZero(m_gphi);
+
+  EBAMRDataOps::incr(m_velo, a_initialVelo, a_pertScale);
+
+  EBAMRDataOps::setToZero(m_baseVelo);
+  EBAMRDataOps::setToZero(m_baseAdvVelo);
+
+  for (int idir = 0; idir < SpaceDim; idir++)
+  {
+    EBAMRDataOps::setToZero(m_baseVeloGrad[idir]);
+  }
+
+  EBAMRDataOps::incr(m_baseVelo, a_baseflowVelo, 1.0);
+  EBAMRDataOps::assign(m_baseAdvVelo, a_baseAdvVelo);
+
+  defineIrregularData();
+  defineBaseflowIrregularData();
+
+  setupCoveredBaseAdvVelocity(m_baseVelo, m_baseAdvVelo);
+  computeBaseflowVelocityGradients();
+
+  postInitialize();
+  m_doRestart = false;
+//  m_doRestart = true;
+  m_time = 0.;
+}
+/*********/
+void EBAMRLinINS::
+concludeNewtonIterationRun()
+{
+
+}
+/*********/
 void EBAMRLinINS::
 setupForStabilityRun(const Epetra_Vector&             a_x,
                      const Vector<DisjointBoxLayout>& a_baseflowDBL,

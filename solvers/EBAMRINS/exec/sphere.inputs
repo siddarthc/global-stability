@@ -1,4 +1,5 @@
 #restart_file          = check.nx256.step.7000.2d.hdf5
+restart_file          = check_state_before_PI_reset_0_step571.hdf5
 max_step  	      = 60050
 max_time              = 1000000
 
@@ -79,7 +80,7 @@ cutplane_normal = 1.0 0.0 0.0
 
 #SFD stuff
 do_SFD = true
-restart_SFD = false
+restart_SFD = true
 plot_SFD = true
 nFilters = 1
 #smallest_filter = 3.144
@@ -91,6 +92,12 @@ largest_filter = 2.0
 control_coef = 1.0
 do_PIControl = true
 integral_coef = 0.5 0.0
+
+#Newton iteration stuff
+do_Newton_iterations = false
+Newton_iteration_flow_solver_steps = 15
+Newton_iteration_tol = 5e-6
+max_Newton_iterations = 1
 
 convergence_metric = 0.000001
 convergence_variable = 0 

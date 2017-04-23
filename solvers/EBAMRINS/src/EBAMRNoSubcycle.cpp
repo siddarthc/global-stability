@@ -43,6 +43,7 @@
 #include "memtrack.H"
 
 #include "SFDUtils.H"
+#include "EBAMRINSNewtonIterationSolver.H"
 #include <fstream>
 
 #include "NamespaceHeader.H"
@@ -75,6 +76,7 @@ EBAMRNoSubcycle(const AMRParameters&      a_params,
 
   //create initial and boundary condition object
   m_ibc    =   a_ibcfact.create();
+  m_ibcFact = &a_ibcfact;
 
   //resize vectors and set them where we can
   Real coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
@@ -125,6 +127,8 @@ EBAMRNoSubcycle(const AMRParameters&      a_params,
   m_isSetup  = false;
 
   m_pointsUpdated = 0;
+
+  m_isLinIBCSetup = false;
 }
 /**********/
 void
@@ -283,6 +287,7 @@ setupForAMRRun()
   postInitialize();
 
 }
+/*********/
 void
 EBAMRNoSubcycle::
 filter(Vector<LevelData<EBCellFAB>* >&   a_veloc)
@@ -1671,21 +1676,67 @@ EBAMRNoSubcycle::postTimeStep()
       SFDUtils::computeL2Norm(L2Norm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
       SFDUtils::computeQDiffDotProd(qdiffDotProd, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
 
-      if (qdiffDotProd < 0.) 
+      if (qdiffDotProd < 0. && LinfNorm < 1.e-5) 
       {
-        std::string pltName = "plot_integrated_error_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
+        std::string pltName = "integrated_error_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
         SFDUtils::plotSFDIntegratorError(pltName, m_SFDOp, m_grids, m_ebisl, m_domain, m_dx, m_dt, m_time, m_params.m_refRatio, iFilter);
+
+        string fileName = "state_before_PI_reset_" + SSTR(iFilter) +"_step" + SSTR(m_curStep) + ".hdf5";
+        writePlotFile(&fileName);
+        writeCheckpointFile(&fileName);
 
         Real errorNorm;
         SFDUtils::computeIntegratedErrorL2Norm(errorNorm, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
 
-        pout() << "||integrated error||2 for filter " << iFilter << " = " << errorNorm << endl;
-
-        for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+        if (errorNorm < 1.e-10) 
         {
-          m_SFDOp[ilev].resetIntegratorToZero(iFilter, false);
+          m_stopAdvance = true;
         }
-        pout() << "Integrator for filter " << iFilter << " reset at time = " << m_time << endl; 
+        else
+        {
+          if (m_params.m_doNewtonIterations)
+          {
+            CH_assert(m_isLinIBCSetup);
+            pout() << "doing Newton iteration to get descent direction and step" << endl;
+ 
+            Vector<LevelData<EBCellFAB>* > tmpHolder(m_finestLevel+1, NULL);
+            for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+            {
+              tmpHolder[ilev] = new LevelData<EBCellFAB>();
+              EBCellFactory ebcellfact(m_eblg[ilev].getEBISL());
+              tmpHolder[ilev]->define(m_grids[ilev], SpaceDim, 3*IntVect::Unit, ebcellfact);
+            }
+
+            EBAMRINSNewtonIterationSolver NewtonSolver(m_params, m_ibcFact, m_linIBCFact, m_grids, m_eblg, m_dx, m_domain[0], m_params. m_nNewtonIterationFlowSolverSteps*m_dt, m_viscosity, m_params.m_NewtonIterationTol, m_params.m_maxNewtonIterationSteps);
+
+//          NewtonSolver.solveNoInit(tmpHolder, "check_"+fileName, m_time); 
+            NewtonSolver.solveNoInit(tmpHolder, m_velo);
+   
+            EBAMRDataOps::setToZero(m_velo);
+            EBAMRDataOps::incr(m_velo, tmpHolder, 1.);
+
+            for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+            {
+              m_SFDOp[ilev].resetState(*tmpHolder[ilev], iFilter);
+            }
+
+            for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+            {
+              delete tmpHolder[ilev];
+            }
+          }
+    
+          pout() << "||integrated error||2 for filter " << iFilter << " = " << errorNorm << endl;
+
+          for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+          {
+            m_SFDOp[ilev].resetIntegrator(*m_velo[ilev], iFilter, false);
+          }
+          pout() << "Integrator for filter " << iFilter << " reset at time = " << m_time << endl; 
+
+          std::string pltName1 = "plot_state_after_reset_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
+          writePlotFile(&pltName1);
+        }
       }
 
       pout() << "||q-qBar||inf for filter " << iFilter << " = " << LinfNorm << endl;
@@ -4097,8 +4148,71 @@ setCoveredStuffToZero(LevelData<EBCellFAB>& a_vort)
     }
 }
 /*********/
+// Newton Iteration routines
+/*********/
+void EBAMRNoSubcycle::
+setupForNewtonIterationRun(const Vector<LevelData<EBCellFAB>* >& a_initialVelo, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, bool a_restart)
+{
+  
+  if (m_params.m_verbosity > 3)
+  {
+    pout() << "EBAMRNoSubcycle::setupForNewtonIterationRun" << endl;
+  }
+
+  // turn off regridding - don't wanna deal with any more complexity
+  m_params.m_regridInterval = -1;
+  m_params.m_doSFD = 0;
+  m_params.m_checkpointInterval = -1;
+  m_params.m_plotInterval = -1;
+  m_isSetup = true;
+
+  m_finestLevel = a_baseflowDBL.size() - 1;
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    m_grids[ilev] = a_baseflowDBL[ilev];
+  }
+
+  defineEBISLs();
+  defineExtraEBISLs();
+  defineNewVel();
+  definePressure();
+  defineExtraTerms();
+  defineProjections();
+
+  // intialize data for StabilityRun:
+  if (m_params.m_verbosity >= 3)
+  {
+    pout() << "EBAMRNoSubcycle::initialize data for Newton iteration run" << endl;
+  }
+
+  EBAMRDataOps::setToZero(m_velo);
+  EBAMRDataOps::setToZero(m_pres);
+  EBAMRDataOps::setToZero(m_gphi);
+  
+  EBAMRDataOps::incr(m_velo, a_initialVelo, 1.0);
+  
+  defineIrregularData();
+  postInitialize();
+  m_doRestart = a_restart;
+//  m_doRestart = true;
+  m_time = 0.; 
+}
+/*********/
+void EBAMRNoSubcycle::
+concludeNewtonIterationRun()
+{
+
+}
+/*********/
 // Stability routines:
 /*********/
+void EBAMRNoSubcycle::
+setLinINSIBC(const EBIBCFactory& a_linIBCFact)
+{
+  m_isLinIBCSetup = true;
+  m_linIBCFact = &a_linIBCFact;
+}
 /*********/
 void EBAMRNoSubcycle::
 setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData, bool a_setupForPlottingData)
@@ -4184,8 +4298,8 @@ setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& 
   
   defineIrregularData();
   postInitialize();
-//  m_doRestart = false; 
-  m_doRestart = true;
+  m_doRestart = false; 
+//  m_doRestart = true;
   m_time = 0.;
 }
 /*********/

@@ -531,6 +531,15 @@ getAMRINSParameters(AMRParameters&   a_params,
       {
         ppebamr.getarr("integral_coef", a_params.m_integralCoef, 0, a_params.m_nFilters);
       }
+
+      // for NewtonIterations
+      ppebamr.get("do_Newton_iterations", a_params.m_doNewtonIterations);
+      if (a_params.m_doNewtonIterations)
+      {
+        ppebamr.get("Newton_iteration_flow_solver_steps", a_params.m_nNewtonIterationFlowSolverSteps);
+        ppebamr.get("Newton_iteration_tol", a_params.m_NewtonIterationTol);
+        ppebamr.get("max_Newton_iterations", a_params.m_maxNewtonIterationSteps);
+      }
     }
 }
 

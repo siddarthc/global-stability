@@ -31,6 +31,13 @@ public:
 
   virtual ~EBAMRLinINS();
 
+  void setupForNewtonIterationRun(const Vector<LevelData<EBCellFAB>* >& a_initialVelo, 
+                                  const Vector<LevelData<EBCellFAB>* >& a_baseflowVelo, 
+                                  const Vector<LevelData<EBFluxFAB>* >& a_baseAdvVelo, 
+                                  const Vector<DisjointBoxLayout>&      a_baseflowDBL, 
+                                  const Vector<EBLevelGrid>&            a_baseflowEBLG,
+                                  Real                                  a_pertScale);
+
   void setupForStabilityRun(const Epetra_Vector&             a_x,
                             const Vector<DisjointBoxLayout>& a_baseflowDBL,
                             const Vector<EBLevelGrid>&       a_baseflowEBLG,
@@ -38,6 +45,8 @@ public:
                             double                           a_pertScale,
                             bool                             a_incOverlapData,
                             bool                             a_setupForPlottingData = false);
+
+  void concludeNewtonIterationRun();
 
 protected:
 

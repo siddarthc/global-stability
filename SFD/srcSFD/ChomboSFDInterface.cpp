@@ -21,6 +21,7 @@ ChomboSFDInterface::ChomboSFDInterface()
 {
   m_isDefined = false;
   m_doPIControl = false;
+  m_nResetSteps = 0;
 }
 /*********/
 ChomboSFDInterface::~ChomboSFDInterface()
@@ -33,6 +34,8 @@ ChomboSFDInterface::~ChomboSFDInterface()
       if (m_qdiffOld[i] != NULL) delete m_qdiffOld[i];
       if (m_qdiffNew[i] != NULL) delete m_qdiffNew[i];
       if (m_qdiffNew[i] != NULL) delete m_qdiffSum[i];
+      if (m_qBar_tOld[i] != NULL) delete m_qBar_tOld[i];
+      if (m_qdiffSum_tOld[i] != NULL) delete m_qdiffSum_tOld[i];
     }
 
 }
@@ -58,9 +61,10 @@ define(int    a_nFilters,
     m_qdiffOld.resize(a_nFilters);
     m_qdiffNew.resize(a_nFilters);
     m_qdiffSum.resize(a_nFilters);
+    m_qBar_tOld.resize(a_nFilters);
+    m_qdiffSum_tOld.resize(a_nFilters);
   }
   
-
   m_isDefined = true;
 }
 /*********/
@@ -91,9 +95,18 @@ initialize(const LevelData<EBCellFAB>& a_data,
         m_qdiffNew[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
         m_qdiffSum[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
 
+        m_qBar_tOld[i] = new LevelData<EBCellFAB>();
+        m_qBar_tOld[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
+      
+        m_qdiffSum_tOld[i] = new LevelData<EBCellFAB>();
+        m_qdiffSum_tOld[i]->define(a_eblg.getDBL(), m_nComp, ivGhost, fact);
+
         EBLevelDataOps::setToZero(*m_qdiffOld[i]);
         EBLevelDataOps::setToZero(*m_qdiffNew[i]);
         EBLevelDataOps::setToZero(*m_qdiffSum[i]);
+
+        EBLevelDataOps::setToZero(*m_qBar_tOld[i]);
+        EBLevelDataOps::setToZero(*m_qdiffSum_tOld[i]);
       }
     }
 }
@@ -122,6 +135,9 @@ doEBCoarseAverage(ChomboSFDInterface* a_finerLevel,
           a_ebCoarseAverage.average(*(m_qdiffOld[i]), *((a_finerLevel->m_qdiffOld)[i]), interv);
           a_ebCoarseAverage.average(*(m_qdiffNew[i]), *((a_finerLevel->m_qdiffNew)[i]), interv);
           a_ebCoarseAverage.average(*(m_qdiffSum[i]), *((a_finerLevel->m_qdiffSum)[i]), interv);
+
+          a_ebCoarseAverage.average(*(m_qBar_tOld[i]), *((a_finerLevel->m_qBar_tOld)[i]), interv);
+          a_ebCoarseAverage.average(*(m_qdiffSum_tOld[i]), *((a_finerLevel->m_qdiffSum_tOld)[i]), interv);          
         }
       }
   }
@@ -161,13 +177,63 @@ operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg, double a
 }
 /*********/
 void ChomboSFDInterface::
-resetIntegratorToZero(int a_iFilter, bool a_turnOff)
+resetIntegrator(LevelData<EBCellFAB>& a_q, int a_iFilter, bool a_turnOff)
 {
   if (m_doPIControl)
   {
+//    m_integralCoef[a_iFilter] *= 1.1;
+    EBLevelDataOps::setToZero(*m_qdiffOld[a_iFilter]);
+    EBLevelDataOps::setToZero(*m_qdiffNew[a_iFilter]);
     EBLevelDataOps::setToZero(*m_qdiffSum[a_iFilter]);
-    if (a_turnOff) m_integralCoef[a_iFilter] = 0.; 
+    m_nResetSteps++; 
   }
+}
+/*********/
+void ChomboSFDInterface::
+resetState(const LevelData<EBCellFAB>& a_val, int a_iFilter)
+{
+  EBLevelDataOps::setToZero(*m_qBar[a_iFilter]);
+  EBLevelDataOps::incr(*m_qBar[a_iFilter], a_val, 1.);
+
+/*
+  int nvar = a_q.nComp();
+  const DisjointBoxLayout& grids = a_q.getBoxes();
+  DataIterator dit = grids.dataIterator();
+  // iterator over the grids on this processor
+  for (dit.begin(); dit.ok(); ++dit)
+  {
+    EBCellFAB& q = a_q[dit()];
+    EBCellFAB& qBar = (*m_qBar[a_iFilter])[dit()];
+    EBCellFAB& qBar_tOld = (*m_qBar_tOld[a_iFilter])[dit()];
+    EBCellFAB& qdiffSum = (*m_qdiffSum[a_iFilter])[dit()];
+    EBCellFAB& qdiffSum_tOld = (*m_qdiffSum_tOld[a_iFilter])[dit()];
+
+    const Box& box = grids.get(dit());
+    const EBISBox& ebisBox = q.getEBISBox();
+    IntVectSet ivs(box);
+    for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+    {
+      const VolIndex& vof = vofit();
+
+      Real tmp, ratio;
+      for (int ivar = 0; ivar < nvar; ivar++)
+      {  
+        tmp = qBar(vof, ivar);
+        ratio = (qBar(vof, ivar) - qBar_tOld(vof, ivar))/(qdiffSum(vof, ivar) - qdiffSum_tOld(vof, ivar));
+        if (abs(ratio) > 1.) 
+        {
+          int sign = (ratio < 0) ? -1 : 1;
+          ratio = 0.1*sign;
+        }
+        qBar(vof, ivar) -= 1.*qdiffSum(vof, ivar)*ratio;
+//          qBar(vof,ivar) += 0.1;
+        q(vof, ivar) = qBar(vof, ivar);
+        qBar_tOld(vof, ivar) = tmp;
+        qdiffSum_tOld(vof, ivar) = qdiffSum(vof, ivar);
+      }
+    }
+  }
+*/  
 }
 /*********/
 void ChomboSFDInterface::
@@ -200,33 +266,45 @@ regrid(LevelData<EBCellFAB>& a_tempFAB,
       {
         m_qdiffOld[i]->copyTo(interv, a_tempFAB, interv);
         m_qdiffOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
-
         if (a_coarLevel != NULL)
         {
           a_interp.interpolate(*(m_qdiffOld[i]), *((a_coarLevel->m_qdiffOld)[i]), interv);
         }
-
         a_tempFAB.copyTo(interv, *(m_qdiffOld[i]), interv);
 
         m_qdiffNew[i]->copyTo(interv, a_tempFAB, interv);
         m_qdiffNew[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
-
         if (a_coarLevel != NULL)
         {
           a_interp.interpolate(*(m_qdiffNew[i]), *((a_coarLevel->m_qdiffNew)[i]), interv);
         }
-
-        a_tempFAB.copyTo(interv, *(m_qdiffSum[i]), interv);
+        a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
 
         m_qdiffSum[i]->copyTo(interv, a_tempFAB, interv);
         m_qdiffSum[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
-
         if (a_coarLevel != NULL)
         {
           a_interp.interpolate(*(m_qdiffSum[i]), *((a_coarLevel->m_qdiffSum)[i]), interv);
         }
-
         a_tempFAB.copyTo(interv, *(m_qdiffSum[i]), interv);
+
+        m_qBar_tOld[i]->copyTo(interv, a_tempFAB, interv);
+        m_qBar_tOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+        if (a_coarLevel != NULL)
+        {
+          a_interp.interpolate(*(m_qBar_tOld[i]), *((a_coarLevel->m_qBar_tOld)[i]), interv);
+        }
+        a_tempFAB.copyTo(interv, *(m_qBar_tOld[i]), interv);
+
+        m_qdiffSum_tOld[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffSum_tOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+
+        if (a_coarLevel != NULL)
+        {
+          a_interp.interpolate(*(m_qdiffSum_tOld[i]), *((a_coarLevel->m_qdiffSum_tOld)[i]), interv);
+        }
+
+        a_tempFAB.copyTo(interv, *(m_qdiffSum_tOld[i]), interv);
       }
     }
 }
@@ -252,18 +330,23 @@ regridBaseData(LevelData<EBCellFAB>&                 a_tempFAB,
       {
         m_qdiffOld[i]->copyTo(interv, a_tempFAB, interv);
         m_qdiffOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
-
         a_tempFAB.copyTo(interv, *(m_qdiffOld[i]), interv);
 
         m_qdiffNew[i]->copyTo(interv, a_tempFAB, interv);
         m_qdiffNew[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
-
         a_tempFAB.copyTo(interv, *(m_qdiffNew[i]), interv);
 
         m_qdiffSum[i]->copyTo(interv, a_tempFAB, interv);
         m_qdiffSum[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
-
         a_tempFAB.copyTo(interv, *(m_qdiffSum[i]), interv);
+
+        m_qBar_tOld[i]->copyTo(interv, a_tempFAB, interv);
+        m_qBar_tOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+        a_tempFAB.copyTo(interv, *(m_qBar_tOld[i]), interv);
+
+        m_qdiffSum_tOld[i]->copyTo(interv, a_tempFAB, interv);
+        m_qdiffSum_tOld[i]->define(a_eblg.getDBL(), nComp, ivGhost, fact);
+        a_tempFAB.copyTo(interv, *(m_qdiffSum_tOld[i]), interv);
       }
     } 
 }
@@ -312,7 +395,6 @@ int ChomboSFDInterface::
 getnComp() const
 {
   int retVal = m_nComp*m_qBar.size();
-//  if (m_doPIControl) retVal *= 2;
   return retVal;
 }
 /*********/
@@ -332,7 +414,6 @@ appendDataToFAB(LevelData<FArrayBox>& a_result,
       nComp += m_qBar[i]->nComp();
     }
 
-//  if (m_doPIContro)
 }
 /*********/
 void ChomboSFDInterface::
@@ -378,6 +459,12 @@ const Vector<LevelData<EBCellFAB>* >* ChomboSFDInterface::
 getData() const
 {
   return &m_qBar;
+}
+/*********/
+const LevelData<EBCellFAB>* ChomboSFDInterface::
+getData(int a_filterIndex) const
+{
+  return m_qBar[a_filterIndex];
 }
 /*********/
 const Vector<LevelData<EBCellFAB>* >* ChomboSFDInterface::

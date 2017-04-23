@@ -95,6 +95,13 @@ public:
     m_integralCoef.resize(1);
     m_integralCoef[0] = 0.;
 
+    // for Newton iterations
+    m_doNewtonIterations = false;
+//    m_nNewtonIterationSteps = 0;
+    m_nNewtonIterationFlowSolverSteps = 0;
+    m_NewtonIterationTol = 1.e-6;
+    m_maxNewtonIterationSteps = 1;
+
     m_plotSFD        = false;
 
   }
@@ -200,6 +207,13 @@ public:
   // for PI control
   Vector<Real>                        m_integralCoef;
   bool                                m_doPIControl;
+
+  // for Newton Iteratrions
+  bool m_doNewtonIterations;
+//  int m_nNewtonIterationSteps;
+  int m_nNewtonIterationFlowSolverSteps;
+  Real m_NewtonIterationTol;
+  int m_maxNewtonIterationSteps;
 };
 
 
@@ -272,8 +286,15 @@ public:
   /// set up for restart
   void setupForRestart(const string& a_restartFile);
 
+  // Newton iteration run
+  void setLinINSIBC(const EBIBCFactory& a_linIBCFact);
+  
+  void setupForNewtonIterationRun(const Vector<LevelData<EBCellFAB>* >& a_initialVelo, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, bool a_restart);
+
   // Sid added for Stability solves : 11/16/16
   void setupForStabilityRun(const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_pertScale, bool a_incOverlapData, bool a_setupForPlottingData = false);
+
+  void concludeNewtonIterationRun();
 
   void concludeStabilityRun(const std::string* a_fileName, bool a_writeCheckpoint);
 
@@ -285,10 +306,21 @@ public:
   {
     return m_grids;
   }
+
+  Vector<EBLevelGrid>& getEBLG()
+  {
+    return m_eblg;
+  }
+
   ///for convergence tests
   Vector<EBISLayout>& getEBISLayouts()
   {
     return m_ebisl;
+  }
+
+  Vector<LevelData<EBFluxFAB>* >& getAdvVelo()
+  {
+    return m_advVel;
   }
 
   ///for convergence tests
@@ -543,6 +575,11 @@ protected:
 
   Vector<ChomboSFDInterface> m_SFDOp;
 
+  void turnOnRestart()
+  {
+    m_doRestart = true;
+  }
+
 public:
   void
   extrapolateScalarCol(Vector<LevelData<EBFluxFAB>* >                     &  a_macScalar,
@@ -600,6 +637,9 @@ protected:
   //parmaters
   AMRParameters          m_params;
   EBIBC*                 m_ibc;
+  const EBIBCFactory*    m_ibcFact;
+  const EBIBCFactory*    m_linIBCFact;
+
   const EBIndexSpace*    m_ebisPtr;
 
   //grid description
@@ -639,6 +679,9 @@ protected:
   bool m_useFixedDt;
 
   bool m_isSetup;
+
+  bool m_isLinIBCSetup; // for Newton iterations
+
   //if viscosity == 0 this turns off viscous solvers, etc
   bool m_viscousCalc;
 
