@@ -62,6 +62,14 @@ public:
 	                       int                                   a_filterIndex,
 	                       bool                                  a_incOverlapData = false); 
 
+  static void
+  computeIntegratedErrorLinfNorm(Real&                                 a_norm,
+                                 const Vector<ChomboSFDInterface>&     a_SFDInterface,
+                                 const Vector<Real>&                   a_dxVect,
+                                 const Vector<int>&                    a_refRatio,
+                                 int                                   a_filterIndex,
+                                 bool                                  a_incOverlapData = false);
+
 private: 
 
 };

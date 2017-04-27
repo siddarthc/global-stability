@@ -557,3 +557,102 @@ computeIntegratedErrorL2Norm(Real&                                 a_norm,
   a_norm /= domainVolume;
 }
 /*********/
+void SFDUtils::
+computeIntegratedErrorLinfNorm(Real&                                 a_norm,
+                               const Vector<ChomboSFDInterface>&     a_SFDInterface,
+                               const Vector<Real>&                   a_dxVect,
+                               const Vector<int>&                    a_refRatio,
+                               int                                   a_filterIndex,
+                               bool                                  a_incOverlapData)
+{
+  int finestLevel = a_SFDInterface.size() - 1;
+
+  a_norm = 0.;
+  Real locNorm = 0.; // norm on this processor
+
+  // First, copy the finest level's data
+  // scoping begin
+  {
+    const LevelData<EBCellFAB>& finestError = *(a_SFDInterface[finestLevel].getIntegratedError(a_filterIndex));
+    int nvar = finestError.nComp();
+    const DisjointBoxLayout& finestGrids = finestError.getBoxes();
+    DataIterator finestDit = finestGrids.dataIterator();
+    // iterator over the grids on this processor
+    for (finestDit.begin(); finestDit.ok(); ++finestDit)
+    {
+      const EBCellFAB& error = finestError[finestDit()];
+      const Box& box = finestGrids.get(finestDit());
+      const EBISBox& ebisBox = error.getEBISBox();
+      IntVectSet ivs(box);
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        for (int ivar = 0; ivar < nvar; ivar++)
+        {
+          Real val = abs(error(vofit(), ivar));
+          if (val > locNorm) locNorm = val;
+        }
+        
+      }
+    }
+  } // end scoping
+ 
+  for (int ilev = finestLevel-1; ilev >= 0; ilev--)
+  {
+    const LevelData<EBCellFAB>& levelError = *(a_SFDInterface[ilev].getIntegratedError(a_filterIndex));
+
+    int nvar = levelError.nComp();
+    const DisjointBoxLayout& levelGrids = levelError.getBoxes();
+    const DisjointBoxLayout& finerGrids = a_SFDInterface[ilev+1].getIntegratedError(a_filterIndex)->getBoxes();
+
+    DataIterator levelDit = levelGrids.dataIterator();
+    LayoutIterator finerLit = finerGrids.layoutIterator();
+
+    // iterator over the grids on this processor
+    for (levelDit.begin(); levelDit.ok(); ++levelDit)
+    {
+      const EBCellFAB& error = levelError[levelDit()];
+      const Box& thisBox = levelGrids.get(levelDit());
+      const EBISBox& ebisBox = error.getEBISBox();
+      IntVectSet ivs(thisBox);
+
+      //need to remove the IVs that are already counted at the finerLevel
+      for (finerLit.begin(); finerLit.ok(); ++finerLit)
+      {
+        Box overlapBox = finerGrids[finerLit];
+        overlapBox.coarsen(a_refRatio[ilev]);
+        overlapBox &= thisBox;
+        // if overlap, remove the overlap IVs
+        if (!overlapBox.isEmpty())
+        {
+          IntVectSet ivsExclude(overlapBox);
+          ivs -= ivsExclude;
+        }
+      }
+      for (VoFIterator vofit(ivs, ebisBox.getEBGraph()); vofit.ok(); ++vofit)
+      {
+        for (int ivar = 0; ivar < nvar; ivar++)
+        {
+          Real val = abs(error(vofit(), ivar));
+          if (val > locNorm) locNorm = val;
+        }
+
+      }
+    }
+  }
+
+  // max among all procs:
+  int baseProc = 0;
+  Vector<Real> normVec;
+  gather(normVec, locNorm, baseProc);
+
+  if (procID() == baseProc)
+  {
+    CH_assert(normVec.size() == numProc());
+    for (int ivec = 0; ivec < normVec.size(); ivec++)
+    {
+      if (normVec[ivec] > a_norm) a_norm = normVec[ivec];
+    }
+  }
+  //broadcast the sum to all processors.
+  broadcast(a_norm, baseProc);
+}
