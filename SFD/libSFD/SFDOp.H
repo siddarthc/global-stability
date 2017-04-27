@@ -67,6 +67,16 @@ public:
     applyOperator(a_q, a_qBar, a_dt, a_aXbYFunc, a_copier, a_functions);
   }
 
+  vector<double> getFilterWidth()
+  {
+    return m_filterWidth;
+  }
+
+  vector<double> getControlCoef()
+  {
+    return m_controlCoef;
+  }
+
 protected:
 
   void applyOperator(T& a_q, vector<T*>& a_qBar, double a_dt, aXbYFunc_ a_aXbYFunc, copierFunc_ a_copier, SFDOpFunctions<T>* a_functions)
@@ -120,7 +130,7 @@ protected:
       }
   }
 
-
+/*
   vector<double> getFilterWidth()
   {
     return m_filterWidth;
@@ -130,7 +140,7 @@ protected:
   {
     return m_controlCoef;
   }
-
+*/
 
 protected:
 

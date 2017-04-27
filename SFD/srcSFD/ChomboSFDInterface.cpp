@@ -176,6 +176,12 @@ operator()(LevelData<EBCellFAB>& a_q, double a_dt, EBLevelGrid& a_eblg, double a
   }
 }
 /*********/
+double ChomboSFDInterface::
+getControlCoef(int a_filterIndex)
+{
+  return m_SFDOp.getControlCoef()[a_filterIndex];
+}
+/*********/
 void ChomboSFDInterface::
 resetIntegrator(LevelData<EBCellFAB>& a_q, int a_iFilter, bool a_turnOff)
 {

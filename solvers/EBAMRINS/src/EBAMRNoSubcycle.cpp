@@ -43,6 +43,7 @@
 #include "memtrack.H"
 
 #include "SFDUtils.H"
+#include "GeneralUtils.H"
 #include "EBAMRINSNewtonIterationSolver.H"
 #include <fstream>
 
@@ -197,6 +198,8 @@ EBAMRNoSubcycle::
       m_advVel[ilev]           = NULL;
       m_coveredAdvVelLo[ilev]  = NULL;
       m_coveredAdvVelHi[ilev]  = NULL;
+
+      if (m_NSResidual[ilev] != NULL) delete m_NSResidual[ilev];
     }
   if (m_ccProjector !=  NULL)
     {
@@ -1679,9 +1682,27 @@ EBAMRNoSubcycle::postTimeStep()
     Real errorNorm = 0.;
 
     const int nFilters = m_SFDOp[0].getnFilters();
+
+   
+    Real NSResidL2Norm = 0.;
+    Real NSResidLinfNorm = 0.;
     for (int iFilter = 0; iFilter < nFilters; iFilter++)
     {
+      // m_NSResidual holds: du/dt - S
+      // make m_NSResidual hold: du/dt -S - chi*(q - qbar)
+      for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+      {
+        if (m_NSResidual[ilev] != NULL)
+        {
+          EBLevelDataOps::incr(*m_NSResidual[ilev], *m_SFDOp[ilev].getQdiffNew(iFilter), -m_SFDOp[ilev].getControlCoef(iFilter));
+        }
+      }
+    }
+    GeneralUtils::computeLinfNorm(NSResidLinfNorm, m_NSResidual, m_dx, m_params.m_refRatio, false);
+    GeneralUtils::computeL2Norm(NSResidL2Norm, m_NSResidual, m_dx, m_params.m_refRatio, false);
 
+    for (int iFilter = 0; iFilter < nFilters; iFilter++)
+    {
       if (m_params.m_doPIControl)
       {
         SFDUtils::computeIntegratedErrorLinfNorm(errorNorm, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
@@ -1778,9 +1799,14 @@ EBAMRNoSubcycle::postTimeStep()
         std::ofstream outfile;
         string fileName = "norm_filter_"+SSTR(iFilter)+".his";
         outfile.open(fileName, std::ios_base::app);
-        outfile << m_curStep << "\t" << m_time << "\t" << LinfNorm << "\t" << L2Norm << "\t" << errorNorm << "\t" << qdiffDotProd << "\t" << endl;
+        outfile << m_curStep << "\t" << m_time << "\t" << LinfNorm << "\t" << L2Norm << "\t" << errorNorm << "\t" << NSResidLinfNorm << "\t" << NSResidL2Norm << endl;
       }
     }
+  }
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    if (m_NSResidual[ilev] != NULL) delete m_NSResidual[ilev];
   }
 }
 /*****************/
@@ -3489,10 +3515,27 @@ correctVelocity()
         ", L_2 = " << norm[2] << endl;
     }
 
+  // NS residual computation:
+  if (m_params.m_doSFD && !m_advanceGphiOnly)
+  {
+    m_NSResidual.resize(m_finestLevel+1, NULL);
+    for (int ilev=0; ilev <= m_finestLevel; ilev++)
+    {
+      EBCellFactory ebcellfact(m_ebisl[ilev]);
+      m_NSResidual[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim, 3*IntVect::Unit, ebcellfact);
+    }
+    EBAMRDataOps::setToZero(m_NSResidual);
+
+    EBAMRDataOps::axby(m_NSResidual, tempLDPtr, m_velo, 1.0, -1.0);
+    EBAMRDataOps::scale(m_NSResidual, 1./m_dt);
+    EBAMRDataOps::incr(m_NSResidual, extraSource, -1.0); // m_NSResidual = du/dt - S
+  }
+
   //check steady-state
   //don't change tempLDPtr if using it to cache velocity during priming
   if (!m_advanceGphiOnly && m_params.m_doSteadyState)
     {
+
       EBAMRDataOps::incr(tempLDPtr, m_velo, -1.0);
       EBAMRDataOps::scale(tempLDPtr, 1./m_dt);
       Interval scaInterv(0, 0);
@@ -3504,10 +3547,11 @@ correctVelocity()
             {
               tempLDPtr[ ilev]->copyTo(vecInterv,  *m_cellScratch[ilev], scaInterv);
             }
+
           Real norm[3];
           for (int inorm = 0; inorm < 3; inorm++)
             {
-              norm[inorm] = EBArith::norm(m_cellScratch, m_grids, m_ebisl,
+              norm[inorm] = EBArith::norm(m_NSResidual, m_grids, m_ebisl,
                                           m_params.m_refRatio, 0, inorm, EBNormType::OverBoth);
             }
 

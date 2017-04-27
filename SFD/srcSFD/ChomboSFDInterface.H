@@ -84,6 +84,8 @@ public:
 
   const LevelData<EBCellFAB>* getIntegratedError(int a_filterIndex) const;
 
+  double getControlCoef(int a_filterIndex);
+
   virtual void resetIntegrator(LevelData<EBCellFAB>& a_q, int a_iFilter, bool a_turnOff);
 
   virtual void resetIntegratorCoef(Real a_resetVal, int a_filterIndex);

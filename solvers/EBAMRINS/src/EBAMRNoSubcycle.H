@@ -740,6 +740,12 @@ protected:
   void refluxUDotDelU(Vector<LevelData<EBCellFAB>* >  &  a_uDotDelU,
                       Vector<LevelData<EBFluxFAB>* >  &  a_macAdvVel,
                       Vector<LevelData<EBFluxFAB>* >  &  a_macScalar);
+
+
+  
+  Vector<LevelData<EBCellFAB>* > m_NSResidual; // computes the value of NS(q)
+  void defineNSResidual(const int a_startLevel = -1);
+
 private:
 
   //we disallow copy construction and assignment of objects
