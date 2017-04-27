@@ -1802,11 +1802,11 @@ EBAMRNoSubcycle::postTimeStep()
         outfile << m_curStep << "\t" << m_time << "\t" << LinfNorm << "\t" << L2Norm << "\t" << errorNorm << "\t" << NSResidLinfNorm << "\t" << NSResidL2Norm << endl;
       }
     }
-  }
-
-  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
-  {
-    if (m_NSResidual[ilev] != NULL) delete m_NSResidual[ilev];
+  
+    for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+    {
+      if (m_NSResidual[ilev] != NULL) delete m_NSResidual[ilev];
+    }
   }
 }
 /*****************/
@@ -3518,17 +3518,18 @@ correctVelocity()
   // NS residual computation:
   if (m_params.m_doSFD && !m_advanceGphiOnly)
   {
-    m_NSResidual.resize(m_finestLevel+1, NULL);
+    m_NSResidual.resize(m_finestLevel+1);
     for (int ilev=0; ilev <= m_finestLevel; ilev++)
     {
       EBCellFactory ebcellfact(m_ebisl[ilev]);
       m_NSResidual[ilev] = new LevelData<EBCellFAB>(m_grids[ilev], SpaceDim, 3*IntVect::Unit, ebcellfact);
     }
-    EBAMRDataOps::setToZero(m_NSResidual);
 
+    EBAMRDataOps::setToZero(m_NSResidual);
     EBAMRDataOps::axby(m_NSResidual, tempLDPtr, m_velo, 1.0, -1.0);
     EBAMRDataOps::scale(m_NSResidual, 1./m_dt);
     EBAMRDataOps::incr(m_NSResidual, extraSource, -1.0); // m_NSResidual = du/dt - S
+
   }
 
   //check steady-state
