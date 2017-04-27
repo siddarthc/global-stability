@@ -94,6 +94,7 @@ public:
     m_doPIControl = false;
     m_integralCoef.resize(1);
     m_integralCoef[0] = 0.;
+    m_resetPItol = 1.e-6;
 
     // for Newton iterations
     m_doNewtonIterations = false;
@@ -207,6 +208,7 @@ public:
   // for PI control
   Vector<Real>                        m_integralCoef;
   bool                                m_doPIControl;
+  Real                                m_resetPItol;
 
   // for Newton Iteratrions
   bool m_doNewtonIterations;
@@ -665,7 +667,12 @@ protected:
   int m_curStep;
 
   // for PI control
-  int m_tmpCounter;
+//  int m_tmpCounter;
+  int m_PIresetCounter;
+  Real m_PIIntegralErrorOld1;
+  Real m_PIIntegralErrorOld2;
+  Real m_PIresetTimeOld1;
+  Real m_PIresetTimeOld2;
 
   //  time stepping information
   Real m_time;

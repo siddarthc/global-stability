@@ -190,6 +190,12 @@ resetIntegrator(LevelData<EBCellFAB>& a_q, int a_iFilter, bool a_turnOff)
 }
 /*********/
 void ChomboSFDInterface::
+resetIntegratorCoef(Real a_resetVal, int a_filterIndex)
+{
+  m_integralCoef[a_filterIndex] *= a_resetVal; 
+}
+/*********/
+void ChomboSFDInterface::
 resetState(const LevelData<EBCellFAB>& a_val, int a_iFilter)
 {
   EBLevelDataOps::setToZero(*m_qBar[a_iFilter]);

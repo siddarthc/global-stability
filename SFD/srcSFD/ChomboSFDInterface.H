@@ -86,6 +86,8 @@ public:
 
   virtual void resetIntegrator(LevelData<EBCellFAB>& a_q, int a_iFilter, bool a_turnOff);
 
+  virtual void resetIntegratorCoef(Real a_resetVal, int a_filterIndex);
+
   virtual void resetState(const LevelData<EBCellFAB>& a_val, int a_iFilter);
 
   bool convergedToSteadyState(const LevelData<EBCellFAB>& a_data, EBLevelGrid& a_eblg);

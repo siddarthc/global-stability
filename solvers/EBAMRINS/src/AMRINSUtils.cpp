@@ -530,6 +530,7 @@ getAMRINSParameters(AMRParameters&   a_params,
       if (a_params.m_doPIControl)
       {
         ppebamr.getarr("integral_coef", a_params.m_integralCoef, 0, a_params.m_nFilters);
+        ppebamr.get("PI_reset_tol", a_params.m_resetPItol);
       }
 
       // for NewtonIterations

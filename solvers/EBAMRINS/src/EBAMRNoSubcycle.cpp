@@ -129,6 +129,13 @@ EBAMRNoSubcycle(const AMRParameters&      a_params,
   m_pointsUpdated = 0;
 
   m_isLinIBCSetup = false;
+
+  // PI control stuff:
+  m_PIresetCounter = 0;
+  m_PIIntegralErrorOld1 = 0.;
+  m_PIIntegralErrorOld2 = 0.;
+  m_PIresetTimeOld1 = 0.;
+  m_PIresetTimeOld2 = 0.;
 }
 /**********/
 void
@@ -1669,14 +1676,23 @@ EBAMRNoSubcycle::postTimeStep()
       }
 */
     Real L2Norm, LinfNorm, qdiffDotProd;
+    Real errorNorm = 0.;
+
     const int nFilters = m_SFDOp[0].getnFilters();
     for (int iFilter = 0; iFilter < nFilters; iFilter++)
     {
+
+      if (m_params.m_doPIControl)
+      {
+        SFDUtils::computeIntegratedErrorLinfNorm(errorNorm, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+      }
+
       SFDUtils::computeLinfNorm(LinfNorm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
       SFDUtils::computeL2Norm(L2Norm, m_velo, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
       SFDUtils::computeQDiffDotProd(qdiffDotProd, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
 
-      if (qdiffDotProd < 0. && LinfNorm < 1.e-5) 
+//      if (qdiffDotProd < 0. && LinfNorm < 1.e-5) 
+      if ((LinfNorm < m_params.m_resetPItol))
       {
         std::string pltName = "integrated_error_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
         SFDUtils::plotSFDIntegratorError(pltName, m_SFDOp, m_grids, m_ebisl, m_domain, m_dx, m_dt, m_time, m_params.m_refRatio, iFilter);
@@ -1685,8 +1701,8 @@ EBAMRNoSubcycle::postTimeStep()
         writePlotFile(&fileName);
         writeCheckpointFile(&fileName);
 
-        Real errorNorm;
-        SFDUtils::computeIntegratedErrorL2Norm(errorNorm, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
+//        Real errorNorm;
+//        SFDUtils::computeIntegratedErrorL2Norm(errorNorm, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
 
         if (errorNorm < 1.e-10) 
         {
@@ -1731,12 +1747,28 @@ EBAMRNoSubcycle::postTimeStep()
           for (int ilev = 0; ilev <= m_finestLevel; ilev++)
           {
             m_SFDOp[ilev].resetIntegrator(*m_velo[ilev], iFilter, false);
+/*
+            if (m_PIresetCounter > 1) 
+            {
+              Real tmpVal = ((errorNorm - m_PIIntegralErrorOld1)/(m_time - m_PIresetTimeOld1))/((m_PIIntegralErrorOld1 - m_PIIntegralErrorOld2)/(m_PIresetTimeOld1 - m_PIresetTimeOld2));
+              m_SFDOp[ilev].resetIntegratorCoef(resetVal, iFilter);
+
+              pout() << "integral coef reset with resetVal = " << resetVal << endl;
+            }
+*/
           }
           pout() << "Integrator for filter " << iFilter << " reset at time = " << m_time << endl; 
 
           std::string pltName1 = "plot_state_after_reset_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
           writePlotFile(&pltName1);
         }
+
+        m_PIIntegralErrorOld2 = m_PIIntegralErrorOld1;
+        m_PIIntegralErrorOld1 = errorNorm; 
+
+        m_PIresetTimeOld2 = m_PIresetTimeOld1;
+        m_PIresetTimeOld1 = m_time;
+        m_PIresetCounter++;
       }
 
       pout() << "||q-qBar||inf for filter " << iFilter << " = " << LinfNorm << endl;
@@ -1746,7 +1778,7 @@ EBAMRNoSubcycle::postTimeStep()
         std::ofstream outfile;
         string fileName = "norm_filter_"+SSTR(iFilter)+".his";
         outfile.open(fileName, std::ios_base::app);
-        outfile << m_curStep << "\t" << m_time << "\t" << LinfNorm << "\t" << L2Norm << endl;
+        outfile << m_curStep << "\t" << m_time << "\t" << LinfNorm << "\t" << L2Norm << "\t" << errorNorm << "\t" << qdiffDotProd << "\t" << endl;
       }
     }
   }
