@@ -1713,7 +1713,7 @@ EBAMRNoSubcycle::postTimeStep()
       SFDUtils::computeQDiffDotProd(qdiffDotProd, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
 
 //      if (qdiffDotProd < 0. && LinfNorm < 1.e-5) 
-      if ((LinfNorm < m_params.m_resetPItol))
+      if ((LinfNorm < m_params.m_resetPItol && m_params.m_integralCoef[iFilter] > 0.))
       {
         std::string pltName = "integrated_error_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
         SFDUtils::plotSFDIntegratorError(pltName, m_SFDOp, m_grids, m_ebisl, m_domain, m_dx, m_dt, m_time, m_params.m_refRatio, iFilter);
