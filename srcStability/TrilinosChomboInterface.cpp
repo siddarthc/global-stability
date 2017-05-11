@@ -14,7 +14,7 @@
 
 /*********/
 TrilinosChomboInterface::
-TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData, bool a_doWeighting)
+TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, Vector<std::string> a_initialDataFile ,bool a_incOverlapData, bool a_doWeighting)
 {
   m_solverInterface   = a_solverInterfaceFact->create();
   m_isBaseflowSet     = false;
@@ -25,6 +25,7 @@ TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_sol
   m_doWeighting       = a_doWeighting;
   m_isBaseflowNormSet = false;
   m_baseflowL2Norm    = -1.;
+  m_initialDataFile   = a_initialDataFile;
 }
 
 /*********/
@@ -110,6 +111,14 @@ setBaseflow(const std::string& a_baseflowFile, const Epetra_Comm* a_commPtr)
   computeBaseflowNorm(a_commPtr);
 }
 
+/*********/
+void TrilinosChomboInterface::
+initialData(Epetra_Vector& a_initData, int a_comp) const
+{
+  CH_assert(m_isBaseflowSet);
+  CH_assert(m_initialDataFile.size() > a_comp);
+  m_solverInterface->setInitialData(a_initData, m_baseflowDBL, m_baseflowEBLG, m_initialDataFile[a_comp], m_incOverlapData);
+}
 /*********/
 int TrilinosChomboInterface::
 nElementsOnThisProc() const

@@ -300,29 +300,14 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
 
 // end solver IBC 
 
-  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, doAdjoint, doTransientGrowth, firstOrderFreDeriv));
-
-  RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
-
-  Teuchos::RCP<TrilinosChomboInterfaceFactory> ChomboFact = Teuchos::rcp (new TrilinosChomboInterfaceFactory(solverFact, incOverlapData, doWeighting));
-
-  Teuchos::RCP<TrilinosSolverInterfaceFactory> castChomboFact = static_cast<Teuchos::RCP<TrilinosSolverInterfaceFactory> >(ChomboFact);
-
+  // get all params
   // get all the parameters for stability solve:
   Real eps, integrationTime;
   std::string baseflowFile;
-  pp.get("perturbation_size", eps); 
+  pp.get("perturbation_size", eps);
   pp.get("integration_time", integrationTime);
   pp.get("baseflow_file", baseflowFile);
   
-  MPI_Comm* wcomm = NULL;
-
-#ifdef CH_MPI
-  wcomm = &(Chombo_MPI::comm);
-#endif
-
-  StabilityEvaluator stabEval(eps, integrationTime, baseflowFile, castChomboFact, wcomm);
-
   // get parameters for computing dominant modes
   Real evTol;
   int nev, numBlocks, blockSize, maxRestarts;
@@ -338,11 +323,34 @@ void executeStabilityEvaluator(const AMRParameters& a_params,
   pp.get("plot_num_EVComps", nplotEVComps);
   std::vector<int> plotEVComps;
   pp.getarr("plot_EVComps",plotEVComps,0,nplotEVComps);
-  
+
+  // initial data
+  bool initWithRandomData;
+  pp.get("init_random_data", initWithRandomData);
+  Vector<string> initialDataFile;
+  if (!initWithRandomData)
+  {
+    pp.getarr("initial_data_file",  initialDataFile,0,numBlocks-1);
+  }
+
+  RefCountedPtr<EBAMRINSInterfaceFactory> INSFact = RefCountedPtr<EBAMRINSInterfaceFactory>(new EBAMRINSInterfaceFactory(a_params, baseflowIBCFact, solverIBCFact, a_coarsestDomain, viscosity, plotSnapshots, linINS, doAdjoint, doTransientGrowth, firstOrderFreDeriv));
+
+  RefCountedPtr<ChomboSolverInterfaceFactory> solverFact = static_cast<RefCountedPtr<ChomboSolverInterfaceFactory> >(INSFact);
+
+  Teuchos::RCP<TrilinosChomboInterfaceFactory> ChomboFact = Teuchos::rcp (new TrilinosChomboInterfaceFactory(solverFact, initialDataFile, incOverlapData, doWeighting));
+
+  Teuchos::RCP<TrilinosSolverInterfaceFactory> castChomboFact = static_cast<Teuchos::RCP<TrilinosSolverInterfaceFactory> >(ChomboFact);
+
+  MPI_Comm* wcomm = NULL;
+
+#ifdef CH_MPI
+  wcomm = &(Chombo_MPI::comm);
+#endif
+
+  StabilityEvaluator stabEval(eps, integrationTime, baseflowFile, castChomboFact, wcomm);
 
   CH_START(t3);
-  stabEval.computeDominantModes(evTol, nev, numBlocks, blockSize, maxRestarts, sortEV, false, true, plotEVComps);
-   
+  stabEval.computeDominantModes(evTol, nev, numBlocks, blockSize, maxRestarts, sortEV, false, true, plotEVComps, initWithRandomData);
 }
 
 /*********/

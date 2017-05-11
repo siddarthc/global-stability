@@ -31,7 +31,7 @@ public:
   
   // if a_incOverlapData is true, the data in coarse-fine overlap region into Epetra Vector is also copied
   // if a_doVolWeighting is true, volume-weighted norms and inner-products are used
-  TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, bool a_incOverlapData, bool a_doWeighting);
+  TrilinosChomboInterface(const RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, Vector<std::string> a_initialDataFile, bool a_incOverlapData, bool a_doWeighting);
 
   void setBaseflow(const std::string& a_baseflowFile, const Epetra_Comm* a_commPtr);
 
@@ -42,6 +42,9 @@ public:
   int computeL2Norm(const Epetra_Vector& a_v, double& a_result) const;
 
   int computeDotProd(const Epetra_Vector& a_v1, const Epetra_Vector& a_v2, double& a_result) const;
+
+  //set initial data
+  void initialData(Epetra_Vector& a_initData, int a_comp) const;
 
   void computeSolution(const Epetra_Vector& a_x, Epetra_Vector& a_y) const;
 
@@ -62,6 +65,8 @@ private:
   std::string               m_baseflowFile;
   Vector<DisjointBoxLayout> m_baseflowDBL;
   Vector<EBLevelGrid> m_baseflowEBLG;
+
+  Vector<std::string> m_initialDataFile;
 
   // for weighted norms and inner products
   Epetra_Vector* m_volWeights;

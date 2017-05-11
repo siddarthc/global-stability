@@ -71,7 +71,8 @@ computeDominantModes(double      a_tol,
                      string      a_which,
                      bool        a_isOpSymmetric,
                      bool        a_verbose,
-                     vector<int> a_plotEVComps)
+                     vector<int> a_plotEVComps,
+                     bool        a_initWithRandomData)
 {
   int verbosity = Anasazi::Errors + Anasazi::Warnings + Anasazi::FinalSummary;
 
@@ -100,7 +101,19 @@ computeDominantModes(double      a_tol,
   Epetra_Map Map = m_solverInterface->getEpetraMap(m_commPtr);
 
   RCP<MV> ivec = rcp (new MV (Map, a_blockSize, m_solverInterface) );
-  MVT::MvRandom( *ivec );
+  
+  if (a_initWithRandomData)
+  {
+    MVT::MvRandom( *ivec );
+  }
+  else
+  {
+    int nvec = ivec->NumVectors();
+    for (int i = 0; i < nvec; i++)
+    {
+      m_solverInterface->initialData(*((*ivec)(i)), i);
+    }
+  }
 
   RCP<OP> Aop = rcp (new OP ( m_solverInterface ) );
 

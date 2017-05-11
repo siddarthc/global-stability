@@ -79,6 +79,9 @@ public:
 
 #endif
 
+  // set initial data
+  virtual void setInitialData(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_initDataFile, bool a_incOverlapData) const = 0;
+
   // compute the solution (do: a_y = A*a_x)
   virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const = 0;
   

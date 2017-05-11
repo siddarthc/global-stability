@@ -141,6 +141,14 @@ isLinearSolver() const
 }
 /*********/
 void EBAMRINSInterface::
+setInitialData(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_initDataFile, bool a_incOverlapData) const
+{
+  CH_assert(m_isDefined);
+  EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
+  solver.setInitialDataForStabilityRun(a_initData, a_baseflowDBL, a_baseflowEBLG, a_initDataFile, a_incOverlapData); 
+}
+/*********/
+void EBAMRINSInterface::
 computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const
 {
   CH_assert(m_isDefined);

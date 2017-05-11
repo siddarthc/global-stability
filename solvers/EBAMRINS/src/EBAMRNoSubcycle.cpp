@@ -199,8 +199,14 @@ EBAMRNoSubcycle::
       m_coveredAdvVelLo[ilev]  = NULL;
       m_coveredAdvVelHi[ilev]  = NULL;
 
-      if (m_NSResidual[ilev] != NULL) delete m_NSResidual[ilev];
+//      if (m_NSResidual[ilev] != NULL) delete m_NSResidual[ilev];
     }
+
+  for (int i = 0; i < m_NSResidual.size(); i++)
+  {
+    if (m_NSResidual[i] != NULL) delete m_NSResidual[i];
+  }
+
   if (m_ccProjector !=  NULL)
     {
       delete m_ccProjector;
@@ -4289,6 +4295,105 @@ setLinINSIBC(const EBIBCFactory& a_linIBCFact)
 {
   m_isLinIBCSetup = true;
   m_linIBCFact = &a_linIBCFact;
+}
+/*********/
+void EBAMRNoSubcycle::
+setInitialDataForStabilityRun(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_initDataFile, bool a_incOverlapData)
+{
+
+  m_finestLevel = a_baseflowDBL.size() - 1;
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    m_grids[ilev] = a_baseflowDBL[ilev];
+  }
+
+  defineEBISLs();
+  defineExtraEBISLs();
+  defineNewVel();
+  definePressure();
+  defineExtraTerms();
+  defineProjections();
+
+  // intialize data for StabilityRun:
+  if (m_params.m_verbosity >= 3)
+  {
+    pout() << "EBAMRNoSubcycle::setting initial data for stability run" << endl;
+  }
+
+  EBAMRDataOps::setToZero(m_velo);
+  EBAMRDataOps::setToZero(m_pres);
+  EBAMRDataOps::setToZero(m_gphi);
+
+#ifdef CH_USE_HDF5
+
+  HDF5Handle handleIn(a_initDataFile, HDF5Handle::OPEN_RDONLY);
+  HDF5HeaderData header;
+  header.readFromFile(handleIn);
+
+  int finestLevelFromParmParse   =   m_finestLevel;
+  m_finestLevel   =   header.m_int ["finest_level"]; 
+  if (m_finestLevel > finestLevelFromParmParse)
+  {
+    m_finestLevel = finestLevelFromParmParse;
+  }
+
+  for (int ilev = 0; ilev <= m_finestLevel; ilev++)
+  {
+    handleIn.setGroupToLevel(ilev);
+    read<EBCellFAB>(handleIn, *m_velo[ilev], "velo", m_grids[ilev], Interval(), false);
+    read<EBCellFAB>(handleIn, *m_gphi[ilev], "gphi", m_grids[ilev], Interval(), false);
+    read<EBCellFAB>(handleIn, *m_pres[ilev], "pres", m_grids[ilev], Interval(), false);
+    read<EBFluxFAB>(handleIn, *m_advVel[ilev], "advVel", m_grids[ilev], Interval(), false);
+    readExtraDataFromCheckpoint(handleIn, ilev);
+  }
+
+  handleIn.close();
+
+#else
+
+  MayDay::Error("EBAMRNoSubcycle::setupForStabiltyRun needs HDF5 to read baseflowFile");
+
+#endif
+
+  // the case when oldFinestLevel >= finestLevelFromParmParse is taken care
+  // now go through the f*in pain when oldFinestLevel < finestLevelFromParmParse
+
+  int oldFinestLevel = m_finestLevel;
+  if (oldFinestLevel < finestLevelFromParmParse)
+  {
+    m_finestLevel = finestLevelFromParmParse;
+    Interval interv(0, SpaceDim-1);
+    for (int ilev=oldFinestLevel+1; ilev<=m_finestLevel; ilev++)
+    {
+      //interpolate everywhere
+      EBPWLFineInterp ebInterpVec(m_grids[ ilev  ],
+                                  m_grids[ ilev-1],
+                                  m_ebisl[ ilev  ],
+                                  m_ebisl[ ilev-1],
+                                  m_domain[ilev-1],
+                                  m_params.m_refRatio[ilev-1],
+                                  SpaceDim,
+                                  m_ebisPtr);
+      ebInterpVec.interpolate(*m_velo[ilev  ],
+                              *m_velo[ilev-1],
+                              interv);
+      ebInterpVec.interpolate(*m_gphi[ilev  ],
+                              *m_gphi[ilev-1],
+                              interv);
+      }
+
+    m_ccProjector->project(m_velo, m_gphi);
+    filter(m_velo);
+  }
+
+  int nVeloComp = m_velo[0]->nComp();
+//  int nPresComp = m_pres[0]->nComp();
+//  int ntotComp = nVeloComp + nPresComp;
+  int ntotComp = nVeloComp;
+
+  ChomboEpetraOps::addChomboDataToEpetraVec(&a_initData, m_velo, 0., 1., 0, 0, nVeloComp, ntotComp, a_incOverlapData, m_params.m_refRatio);
+
+//  ChomboEpetraOps::addChomboDataToEpetraVec(&a_initData, m_pres, 0., 1., 0, nVeloComp, nPresComp, ntotComp, a_incOverlapData, m_params.m_refRatio);  
 }
 /*********/
 void EBAMRNoSubcycle::

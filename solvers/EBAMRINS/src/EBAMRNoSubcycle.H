@@ -300,6 +300,8 @@ public:
 
   void concludeStabilityRun(const std::string* a_fileName, bool a_writeCheckpoint);
 
+  void setInitialDataForStabilityRun(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_initDataFile, bool a_incOverlapData);
+
   /// advance solution.  returns time of final solution
   Real run(Real a_maxTime, int a_maxStep);
 

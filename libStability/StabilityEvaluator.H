@@ -109,7 +109,8 @@ public:
                            string      a_which,
                            bool        a_isOpSymmetric,
                            bool        a_verbose,
-                           vector<int> a_plotEVComps);
+                           vector<int> a_plotEVComps,
+                           bool        a_initWithRandomData);
 
 private:
 
