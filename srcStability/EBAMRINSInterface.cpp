@@ -13,7 +13,7 @@
 #define SSTR( x ) static_cast< std::ostringstream & >( \
         ( std::ostringstream() << std::dec << x ) ).str()
 
-int EBAMRINSInterface::s_callCounter = -1;
+int EBAMRINSInterface::s_callCounter = 0;
 
 /*********/
 /*********/
@@ -23,7 +23,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
                   const RefCountedPtr<EBIBCFactory>& a_solverIBC,
                   const ProblemDomain& a_coarsestDomain,
                   Real                 a_viscosity,
-                  bool                 a_plotSnapshots,
+                  int                  a_snapshotInterval,
                   bool                 a_doLinINS,
                   bool                 a_doAdjoint,
                   bool                 a_doTransientGrowth,
@@ -39,7 +39,7 @@ EBAMRINSInterface(const AMRParameters& a_params,
   m_ebisPtr = a_ebisPtr;
   m_refRatio = m_params.m_refRatio;
   m_coarsestDx = m_params.m_domainLength/Real(a_coarsestDomain.size(0));
-  m_plotSnapshots = a_plotSnapshots;
+  m_snapshotInterval = a_snapshotInterval;
   m_doLinINS = a_doLinINS;
   m_doAdjoint = a_doAdjoint;
   m_doTransientGrowth = a_doTransientGrowth;
@@ -145,7 +145,7 @@ setInitialData(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_bas
 {
   CH_assert(m_isDefined);
   EBAMRNoSubcycle solver(m_params, *m_baseflowIBCFact, m_coarsestDomain, m_viscosity);
-  solver.setInitialDataForStabilityRun(a_initData, a_baseflowDBL, a_baseflowEBLG, a_initDataFile, a_incOverlapData); 
+  solver.setInitialDataForStabilityRun(a_initData, a_baseflowDBL, a_baseflowEBLG, a_initDataFile, a_incOverlapData);
 }
 /*********/
 void EBAMRINSInterface::
@@ -316,16 +316,16 @@ computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<Disjo
   pout() << "computed y = EMAMRINSOp*x" << endl;
   pout() << "Matrix-Vector Multiplication was computed " << s_callCounter << " times" << endl;
 
-  if (m_plotSnapshots)
+  if ((m_snapshotInterval > 0) && (s_callCounter%m_snapshotInterval == 0))
   {  
     std::string pltNameY = "vector_y_at_step"+SSTR(s_callCounter) + ".hdf5";
     std::string pltNameX = "vector_x_at_step"+SSTR(s_callCounter) + ".hdf5";
 
     pout() << "plotting a_x" << endl;
-    plotEpetraVector(a_x, a_baseflowDBL, a_baseflowEBLG, pltNameX, a_incOverlapData,false);
+    plotEpetraVector(a_x, a_baseflowDBL, a_baseflowEBLG, pltNameX, a_incOverlapData,true);
 
     pout() << "plotting a_y" << endl;
-    plotEpetraVector(a_y, a_baseflowDBL, a_baseflowEBLG, pltNameY, a_incOverlapData,false);
+    plotEpetraVector(a_y, a_baseflowDBL, a_baseflowEBLG, pltNameY, a_incOverlapData,true);
   }
 }
 /*********/

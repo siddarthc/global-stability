@@ -20,7 +20,7 @@ public:
                            const RefCountedPtr<EBIBCFactory>& a_solverIBC,
                            const ProblemDomain& a_coarsestDomain,
                            Real                 a_viscosity,
-                           bool                 a_plotSnapshots,
+                           int                  a_snapshotInterval,
                            bool                 a_doLinINS,
                            bool                 a_doAdjoint,
                            bool                 a_doTransientGrowth,
@@ -34,11 +34,12 @@ public:
     m_coarsestDomain  = a_coarsestDomain;
     m_viscosity       = a_viscosity;
     m_ebisPtr         = a_ebisPtr;
-    m_plotSnapshots   = a_plotSnapshots;
     m_doLinINS        = a_doLinINS;
     m_doAdjoint       = a_doAdjoint;
     m_doTransientGrowth = a_doTransientGrowth;
     m_doFirstOrderFreDeriv = a_doFirstOrderFreDeriv;
+
+    m_snapshotInterval = a_snapshotInterval;
   }
 
 /*********/
@@ -55,7 +56,7 @@ public:
                                                       m_solverIBCFact,
                                                       m_coarsestDomain,
                                                       m_viscosity,
-                                                      m_plotSnapshots,
+                                                      m_snapshotInterval,
                                                       m_doLinINS,
                                                       m_doAdjoint,
                                                       m_doTransientGrowth,
@@ -72,7 +73,7 @@ private:
   RefCountedPtr<EBIBCFactory> m_solverIBCFact;
   ProblemDomain               m_coarsestDomain;
   Real                        m_viscosity;
-  bool                        m_plotSnapshots;
+  int                         m_snapshotInterval;
   bool                        m_doLinINS;
   bool                        m_doAdjoint;
   bool                        m_doTransientGrowth;

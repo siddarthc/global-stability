@@ -23,7 +23,7 @@ public:
                     const RefCountedPtr<EBIBCFactory>& a_solverIBC, 
                     const ProblemDomain& a_coarsestDomain,
                     Real                 a_viscosity,
-                    bool                 a_plotSnapshots,
+                    int                  a_snapshotInterval,
                     bool                 a_doLinINS,
                     bool                 a_doAdjoint,
                     bool                 a_doTransientGrowth,
@@ -50,7 +50,7 @@ public:
   virtual void readFileAndCopyToBaseflow(LevelData<EBCellFAB>* a_levBaseflow, const DisjointBoxLayout& a_levDBL, const EBISLayout& a_levEBISL, const ProblemDomain& a_domain, std::string a_baseflowFile, HDF5Handle& a_handleIn) const;
 #endif
 
-  virtual void setInitialData(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_initDataFile, bool a_incOverlapData) const;
+   virtual void setInitialData(Epetra_Vector& a_initData, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, std::string a_initDataFile, bool a_incOverlapData) const;
 
   virtual void computeSolution(Epetra_Vector& a_y, const Epetra_Vector& a_x, const Vector<DisjointBoxLayout>& a_baseflowDBL, const Vector<EBLevelGrid>& a_baseflowEBLG, const std::string& a_baseflowFile, double a_eps, double a_integrationTime, bool a_incOverlapData) const;
 
@@ -70,7 +70,7 @@ private:
   RefCountedPtr<EBIBCFactory> m_solverIBCFact;
   Real m_viscosity;
   bool m_isDefined;
-  bool m_plotSnapshots;
+  int  m_snapshotInterval;
   bool m_doLinINS;
   bool m_doAdjoint;
   bool m_doTransientGrowth;

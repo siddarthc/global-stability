@@ -1719,7 +1719,7 @@ EBAMRNoSubcycle::postTimeStep()
       SFDUtils::computeQDiffDotProd(qdiffDotProd, m_SFDOp, m_dx, m_params.m_refRatio, iFilter, false);
 
 //      if (qdiffDotProd < 0. && LinfNorm < 1.e-5) 
-      if ((LinfNorm < m_params.m_resetPItol && m_params.m_integralCoef[iFilter] > 0.))
+      if ((LinfNorm < m_params.m_resetPItol))
       {
         std::string pltName = "integrated_error_" + SSTR(iFilter) + "_step" + SSTR(m_curStep) + ".hdf5";
         SFDUtils::plotSFDIntegratorError(pltName, m_SFDOp, m_grids, m_ebisl, m_domain, m_dx, m_dt, m_time, m_params.m_refRatio, iFilter);
@@ -4331,7 +4331,7 @@ setInitialDataForStabilityRun(Epetra_Vector& a_initData, const Vector<DisjointBo
   header.readFromFile(handleIn);
 
   int finestLevelFromParmParse   =   m_finestLevel;
-  m_finestLevel   =   header.m_int ["finest_level"]; 
+  m_finestLevel   =   header.m_int ["finest_level"];
   if (m_finestLevel > finestLevelFromParmParse)
   {
     m_finestLevel = finestLevelFromParmParse;
@@ -4348,7 +4348,6 @@ setInitialDataForStabilityRun(Epetra_Vector& a_initData, const Vector<DisjointBo
   }
 
   handleIn.close();
-
 #else
 
   MayDay::Error("EBAMRNoSubcycle::setupForStabiltyRun needs HDF5 to read baseflowFile");
@@ -4381,7 +4380,6 @@ setInitialDataForStabilityRun(Epetra_Vector& a_initData, const Vector<DisjointBo
                               *m_gphi[ilev-1],
                               interv);
       }
-
     m_ccProjector->project(m_velo, m_gphi);
     filter(m_velo);
   }
@@ -4392,8 +4390,10 @@ setInitialDataForStabilityRun(Epetra_Vector& a_initData, const Vector<DisjointBo
   int ntotComp = nVeloComp;
 
   ChomboEpetraOps::addChomboDataToEpetraVec(&a_initData, m_velo, 0., 1., 0, 0, nVeloComp, ntotComp, a_incOverlapData, m_params.m_refRatio);
+//  ChomboEpetraOps::addChomboDataToEpetraVec(&a_initData, m_pres, 0., 1., 0, nVeloComp, nPresComp, ntotComp, a_incOverlapData, m_params.m_refRatio);
 
-//  ChomboEpetraOps::addChomboDataToEpetraVec(&a_initData, m_pres, 0., 1., 0, nVeloComp, nPresComp, ntotComp, a_incOverlapData, m_params.m_refRatio);  
+  defineIrregularData();
+  postInitialize();
 }
 /*********/
 void EBAMRNoSubcycle::

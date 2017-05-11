@@ -98,7 +98,17 @@ public:
   //   LI -> Sort in decreasing order of imaginary part
   // a_isOpSymmetric is true if Operator is symmetric
   // a_verbose: if true, prints eigen values
-
+  // a_dyn_ext_nev: 
+  //         determine if we should use the dynamic scheme for selecting the current number of retained eigenvalues.
+  //        NOTE:  This employs a technique similar to ARPACK in that it increases the number of retained eigenvalues
+  //        by one for every converged eigenpair to accelerate convergence.
+  // a_orthogonalization: orthogonalization procedure to use:
+  //        DGKS -> classical Gram-Schmidt with possible DGKS correction step
+  //        SVQB -> perform SVQB technique described by Stathopoulos et al.
+  // a_insitu_restart: restarting technique to use:
+  //        false -> use V*Q 
+  //        true -> use applyHouse(V,H,tau)
+  // a_initWithRandomData: initialize with random data?
   // returns 0 if success
 
   int computeDominantModes(double      a_tol,
@@ -109,6 +119,9 @@ public:
                            string      a_which,
                            bool        a_isOpSymmetric,
                            bool        a_verbose,
+                           bool        a_dynamic_ext_nev,
+                           string      a_orthogonalization,
+                           bool        a_insitu_restart,
                            vector<int> a_plotEVComps,
                            bool        a_initWithRandomData);
 

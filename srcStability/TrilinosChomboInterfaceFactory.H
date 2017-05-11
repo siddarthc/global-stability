@@ -25,12 +25,12 @@ public:
 
 /*********/
 
-  TrilinosChomboInterfaceFactory(RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, Vector<std::string> a_initialDataFile, bool a_incOverlapData, bool a_doWeighting)
+  TrilinosChomboInterfaceFactory(RefCountedPtr<ChomboSolverInterfaceFactory>& a_solverInterfaceFact, Vector<std::string> a_ICDataFile, bool a_incOverlapData, bool a_doWeighting)
   {
     m_solverInterfaceFact = a_solverInterfaceFact;
     m_incOverlapData      = a_incOverlapData;
     m_doWeighting         = a_doWeighting;
-    m_initialDataFile     = a_initialDataFile;
+    m_ICDataFile          = a_ICDataFile;
   }
 
 /*********/
@@ -42,7 +42,7 @@ public:
 
   Teuchos::RCP<TrilinosSolverInterface> create() const
   {
-    Teuchos::RCP<TrilinosChomboInterface> ChomboInterface = Teuchos::rcp (new TrilinosChomboInterface (m_solverInterfaceFact, m_initialDataFile, m_incOverlapData, m_doWeighting) );
+    Teuchos::RCP<TrilinosChomboInterface> ChomboInterface = Teuchos::rcp (new TrilinosChomboInterface (m_solverInterfaceFact, m_ICDataFile, m_incOverlapData, m_doWeighting) );
 
     Teuchos::RCP<TrilinosSolverInterface> retval = static_cast<Teuchos::RCP<TrilinosSolverInterface> > (ChomboInterface);
 
@@ -59,8 +59,8 @@ private:
   
   bool m_incOverlapData;
   bool m_doWeighting;
-  
-  Vector<std::string> m_initialDataFile;
+
+  Vector<std::string> m_ICDataFile;
 };
 
 #endif

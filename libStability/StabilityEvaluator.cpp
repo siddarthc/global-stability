@@ -71,6 +71,9 @@ computeDominantModes(double      a_tol,
                      string      a_which,
                      bool        a_isOpSymmetric,
                      bool        a_verbose,
+                     bool        a_dynamic_ext_nev,
+                     string      a_orthogonalization,
+                     bool        a_insitu_restart,
                      vector<int> a_plotEVComps,
                      bool        a_initWithRandomData)
 {
@@ -83,6 +86,9 @@ computeDominantModes(double      a_tol,
   EigenPL.set( "Num Blocks", a_numBlocks );
   EigenPL.set( "Maximum Restarts", a_maxRestarts );
   EigenPL.set( "Convergence Tolerance", a_tol );
+  EigenPL.set( "Dynamic Extra NEV", a_dynamic_ext_nev );
+  EigenPL.set( "Orthogonalization", a_orthogonalization ); // options: DGKS or SVQB; default is SVQB
+  EigenPL.set( "In Situ Restarting", a_insitu_restart ); // restarting technique: V*Q or applyHouse(V,H,tau)
 
   // just use the same distribution of elements as the solver to avoid comm overhead. Not sure if it's the best way
 //  int locElements = m_solverInterface->nElementsOnThisProc();
@@ -101,7 +107,6 @@ computeDominantModes(double      a_tol,
   Epetra_Map Map = m_solverInterface->getEpetraMap(m_commPtr);
 
   RCP<MV> ivec = rcp (new MV (Map, a_blockSize, m_solverInterface) );
-  
   if (a_initWithRandomData)
   {
     MVT::MvRandom( *ivec );
@@ -150,7 +155,7 @@ computeDominantModes(double      a_tol,
     {
       cout << "Anasazi::EigensolverMgr::solve() returned unconverged." << endl;
     }
-    return 1;
+//    return 1;
   }
   else
   {
@@ -201,16 +206,18 @@ computeDominantModes(double      a_tol,
   RCP<BaseMV> evecs = sol.Evecs;
   std::vector<int> index = sol.index;
   int numev = sol.numVecs;
+  int nplotev = numev;
+  if (nplotev > a_plotEVComps.size()) nplotev = a_plotEVComps.size();
 
   if (numev > 0)
   {
     // plot eigenvectors
-    if (a_plotEVComps.size() > 0)
+    if (nplotev > 0)
     {
       Anasazi::EpetraMultiVecSolverExt* castEigVec = dynamic_cast<Anasazi::EpetraMultiVecSolverExt*>(evecs.get()); 
       TEUCHOS_TEST_FOR_EXCEPTION( castEigVec==NULL,  std::invalid_argument, "StabilityEvaluator::computeDominantModes cast of MultiVec<double> to EpetraMultiVecSolverExt failed.");
 
-      for (int icomp = 0; icomp < a_plotEVComps.size(); icomp++)
+      for (int icomp = 0; icomp < nplotev; icomp++)
       {
         std::string fileName = "computed_evec_comp_" + SSTR(icomp);
         m_solverInterface->plotEpetraVector(*((*castEigVec)(icomp)), fileName);
