@@ -5,13 +5,3 @@ It uses the Matrix-free Block Krylov Subspace method provided by Anasazi package
 This repository also includes an example showing the computation of Eigenvalues of the incompressible Navier Stokes equations. 
 The Navier Stokes solver is based on the Embeded Boundary solver developed using CHOMBO library (https://commons.lbl.gov/display/chombo/Chombo+-+Software+for+Adaptive+Solutions+of+Partial+Differential+Equations).
 
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
